@@ -25,7 +25,7 @@ char *binary_to_hex(void *data, int n){
 	int new_line_checker = 0;
 
 	while(i < n){
-		int higher_nibble = (((char *) data [i] >> 4) & 0xF);
+		int higher_nibble = ((char *) data [i] >> 4) & 0xF;
 		int lower_nibble  = (char *) data [i] & 0xF;
 
 		if(new_line_checker % 16 == 0){
