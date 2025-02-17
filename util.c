@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 int main(){
-	char *str[5] = "AAAA";
+	char str[5] = "AAAA";
 	char *hex_data = binary_to_hex(str, 4);
 	int i = 0;
 	while(hex_data[i] != '\0'){
@@ -12,22 +12,21 @@ int main(){
 	}
 	return 0;
 }
-char *binar_to_hex(void *data, int n){
-	int length = (n*4); 
-	char *buffer = (char* ) malloc(4 * sizeof(char) + 1);
+char *binary_to_hex(void *data, int n){
+	int n_line = (n /16) + 1; //calculate the number of \n to add to the buffer + last  \n
+	int length = (n*4) + n_line; //considering pair representation per character 
+	char *buffer = (char* ) malloc(length * sizeof(char) + 1);
 
-	if(buffer == null){
-		/*
-		 * TODO: add error signal
-		 * */
-		return;
+	if(buffer == NULL){
+		return NULL;
 	}
 	int i = 0; //data iterator
 	int j = 0; //buffer iterator
 	int new_line_checker = 0;
-	while(data[i] != '\0'){
-		int higher_nibble = ((*(data + i) >> 4) & 0xF);
-		int lower_nibble  = *(data + i + 1) & 0xF;
+
+	while(i < n){
+		int higher_nibble = ((data [i] >> 4) & 0xF);
+		int lower_nibble  = data [i + 1] & 0xF;
 
 		if(new_line_checker % 16 == 0){
 			buffer[j] = '\n'; //add new line
@@ -50,7 +49,7 @@ char *binar_to_hex(void *data, int n){
 		buffer[j+2] = ' ';
 
 		j += 3;
-		i += 2;
+		i++;
 
 	}
 
