@@ -4,7 +4,7 @@
 
 int main(){
 	char str[5] = "AAAA";
-	char *hex_data = binary_to_hex(str, 4);
+	char *hex_data = binary_to_hex(str, 5);
 	int i = 0;
 	while(hex_data[i] != '\0'){
 		printf("%c\n", hex_data[i]);
@@ -25,8 +25,8 @@ char *binary_to_hex(void *data, int n){
 	int new_line_checker = 0;
 
 	while(i < n){
-		int higher_nibble = ((data [i] >> 4) & 0xF);
-		int lower_nibble  = data [i + 1] & 0xF;
+		int higher_nibble = (((char *) data [i] >> 4) & 0xF);
+		int lower_nibble  = (char *) data [i] & 0xF;
 
 		if(new_line_checker % 16 == 0){
 			buffer[j] = '\n'; //add new line
