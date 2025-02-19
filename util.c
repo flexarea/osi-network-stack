@@ -18,7 +18,7 @@ int main(){
 }
 char *binary_to_hex(void *data, int n){
 	int n_line = (n /16) + 1; //calculate the number of \n to add to the buffer + last  \n
-	int length = (n*3) + n_line; //considering pair representation per character 
+	int length = (n*3) + n_line + 1; //considering pair representation per character 
 	char *buffer = (char* ) malloc(length * sizeof(char));
 
 	if(buffer == NULL){
@@ -32,33 +32,35 @@ char *binary_to_hex(void *data, int n){
 		if (((char *) data)[i] == '\0'){
 			break;
 		}
-		int higher_nibble = (((char *) data) [i] >> 4) & 0xF;
-		int lower_nibble  = ((char *) data) [i] & 0xF;
 
 		if(hex_counter % 16 == 0 && hex_counter != 0){
 			buffer[j] = '\n'; //add new line
 			j++;
-		}else{
-			//adding hex pair to buffer
-			if (higher_nibble < 10){
-				buffer[j] = higher_nibble + '0'; 
-			} else {
-				buffer[j] = higher_nibble - 10 + 'A';
-			}
-			if (lower_nibble < 10){
-				buffer[j+1] = lower_nibble + '0'; 
-			} else {
-				buffer[j+1] = lower_nibble - 10 + 'A';
-			}
-			hex_counter += 1; // increment hex_
-			buffer[j+2] = ' ';
-			j += 3;
-			i++;
 		}
+
+		//convert byte to hex
+		int higher_nibble = (((char *) data) [i] >> 4) & 0xF;
+		int lower_nibble  = ((char *) data) [i] & 0xF;
+
+		//adding hex pair to buffer
+		if (higher_nibble < 10){
+			buffer[j] = higher_nibble + '0'; 
+		} else {
+			buffer[j] = higher_nibble - 10 + 'A';
+		}
+		if (lower_nibble < 10){
+			buffer[j+1] = lower_nibble + '0'; 
+		} else {
+			buffer[j+1] = lower_nibble - 10 + 'A';
+		}
+
+		hex_counter += 1; // increment hex_
+		buffer[j+2] = ' ';
+		j += 3;
+		i++;
 	}
 
 	buffer[j] = '\n';
 	buffer[j+1] = '\0';
 	return buffer;
 }
-
