@@ -58,6 +58,11 @@ char *binary_to_hex(void *data, ssize_t n){
 void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 	int size = get_size(hex);	
 	void *buffer = malloc(size);
+	
+	if(buffer == NULL){
+		return NULL;
+	}
+
 	char hex_1, hex_2;
 	ssize_t i = 0;
 	ssize_t counter = 0;
@@ -69,6 +74,17 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 		}else{
 			char  high = *t;
 			char  low  = *(t+1);
+
+			//check for non-hex char for both nibbles
+			if(high < '0' || high > 'f'){
+				free(buffer);
+				return null;
+			}
+			if(low < '0' || low > 'F'){
+				free(buffer);
+				return NULL;
+			}
+
 
 			int higher_nibble = (high >= '0' && high <= '9') ? (high - '0') : (upper_case(high) + 10 - 'A');
 			int lower_nibble  = (low >= '0' && low <= '9') ? (low - '0') : (upper_case(low) + 10 - 'A');
