@@ -3,13 +3,17 @@
 #include <stdlib.h>
 
 int main(){
-	char str[5] = "AAAA";
-	char *hex_data = binary_to_hex(str, 5);
+	char str[19] = "AAAAAAAAAAAAAAAAAA";
+	char *hex_data = binary_to_hex(str, 19);
 	int i = 0;
+	/*
 	while(hex_data[i] != '\0'){
 		printf("%c\n", hex_data[i]);
 		i++;
 	}
+	*/
+	printf("%s", hex_data);
+	free(hex_data);
 	return 0;
 }
 char *binary_to_hex(void *data, int n){
@@ -22,16 +26,18 @@ char *binary_to_hex(void *data, int n){
 	}
 	int i = 0; //data iterator
 	int j = 0; //buffer iterator
-	int hex_pair_counter = 1;
+	int hex_counter = 0;
 
-	while(i < n){
+	while(i < n ){
+		if (((char *) data)[i] == '\0'){
+			break;
+		}
 		int higher_nibble = (((char *) data) [i] >> 4) & 0xF;
 		int lower_nibble  = ((char *) data) [i] & 0xF;
 
-		if(hex_pair_counter % 16 == 0){
+		if(hex_counter % 16 == 0 && hex_counter != 0){
 			buffer[j] = '\n'; //add new line
 			j++;
-			new_line_checjer = 0;
 		}else{
 			//adding hex pair to buffer
 			if (higher_nibble < 10){
@@ -44,16 +50,15 @@ char *binary_to_hex(void *data, int n){
 			} else {
 				buffer[j+1] = lower_nibble - 10 + 'A';
 			}
-			new_line_checker += 2; 
+			hex_counter += 1; // increment hex_
 			buffer[j+2] = ' ';
 			j += 3;
 			i++;
-
 		}
-
 	}
 
-	buffer[j] = '\0';
+	buffer[j] = '\n';
+	buffer[j+1] = '\0';
 	return buffer;
 }
 
