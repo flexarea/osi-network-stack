@@ -63,16 +63,26 @@ char *binary_to_hex(void *data, ssize_t n){
 	buffer[j+1] = '\0';
 	return buffer;
 }
-/*
+
 void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 	int size = get_size(hex);	
 	void *buffer = malloc(size);
+	char temp_buffer[2];
 
-	int i = 0;
 	ssize_t counter = 0;
+	char *t = hex; //copy hex
 
-	while(hex[i] != '\0'){
+	while(*t != '\0'){
+		if(*t == ' ' || *t == '\n'){
+			t++;	
+		}else{
+			buffer[0] = (*t < 'A') ? *t : (*t &= ~' ');
+			buffer[1] = *(t+1);
+			
 		
+
+			t += 2;	
+		}
 	}
 }
 
@@ -86,7 +96,6 @@ int get_size(char *hex){
 	}
 	return size;
 }
-*/
 
 
 
