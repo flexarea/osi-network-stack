@@ -1,2 +1,5 @@
-char *binary_to_hex(void *data, int  n);
-void *hex_to_binary(char *hex, int *bin_bytes);
+#include <sys/types.h>
+
+char *binary_to_hex(void *data, ssize_t  n);
+void *hex_to_binary(char *hex, ssize_t *bin_bytes);
+int get_size(char *hex);

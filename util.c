@@ -3,9 +3,8 @@
 #include <stdlib.h>
 
 int main(){
-	char str[19] = "AAAAAAAAAAAAAAAAAA";
+	char str[19] = "zzzzzzzzzzzzzzzzzz";
 	char *hex_data = binary_to_hex(str, 19);
-	int i = 0;
 	/*
 	while(hex_data[i] != '\0'){
 		printf("%c\n", hex_data[i]);
@@ -16,17 +15,17 @@ int main(){
 	free(hex_data);
 	return 0;
 }
-char *binary_to_hex(void *data, int n){
-	int n_line = (n /16) + 1; //calculate the number of \n to add to the buffer + last  \n
-	int length = (n*3) + n_line + 1; //considering pair representation per character 
-	char *buffer = (char* ) malloc(length * sizeof(char));
+char *binary_to_hex(void *data, ssize_t n){
+	ssize_t n_line = (n /16) + 1; //calculate the number of \n to add to the buffer + last  \n
+	ssize_t length = (n*3) + n_line + 1; //considering pair representation per character 
+	char *buffer = (char* ) malloc(length);
 
 	if(buffer == NULL){
 		return NULL;
 	}
-	int i = 0; //data iterator
-	int j = 0; //buffer iterator
-	int hex_counter = 0;
+	ssize_t i = 0; //data iterator
+	ssize_t j = 0; //buffer iterator
+	ssize_t hex_counter = 0;
 
 	while(i < n ){
 		if (((char *) data)[i] == '\0'){
@@ -64,3 +63,40 @@ char *binary_to_hex(void *data, int n){
 	buffer[j+1] = '\0';
 	return buffer;
 }
+/*
+void *hex_to_binary(char *hex, ssize_t *bin_bytes){
+	int size = get_size(hex);	
+	void *buffer = malloc(size);
+
+	int i = 0;
+	ssize_t counter = 0;
+
+	while(hex[i] != '\0'){
+		
+	}
+}
+
+int get_size(char *hex){
+	char *t;
+	int size = 0;
+	for (t = hex; *t !='\0'; t++){
+		if (*t == ' ' || *t == '\n'){
+			size++;
+		}	
+	}
+	return size;
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
