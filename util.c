@@ -4,13 +4,13 @@
 
 int main(){
 	char str[19] = "zzzzzzzzzzzzzzzzzz";
-	char *hex_data = binary_to_hex(str, 19);
-	/*
-	while(hex_data[i] != '\0'){
-		printf("%c\n", hex_data[i]);
-		i++;
+	char str2[] ="7A 7A 7A 7A";
+	char *hex_data = binary_to_hex(&str, 19);
+	ssize_t bin_bytes;
+	char *binary_data = hex_to_binary(str2, &bin_bytes);	
 	}
-	*/ printf("%s", hex_data);
+	printf("%s", binary_data);
+	// printf("%s", hex_data);
 	free(hex_data);
 	return 0;
 }
@@ -89,7 +89,7 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 			int higher_nibble = (high >= '0' && high <= '9') ? (high - '0') : (upper_case(high) + 10 - 'A');
 			int lower_nibble  = (low >= '0' && low <= '9') ? (low - '0') : (upper_case(low) + 10 - 'A');
 
-			buffer[i] = (higher_nibble >> 4) | lowe_nibble; //store ascii representation of hex value in buffer	
+			buffer[i] = (higher_nibble >> 4) | lower_nibble; //store ascii representation of hex value in buffer	
 			i++;
 			counter++;
 			t += 2;	
@@ -114,15 +114,4 @@ char upper_case(char c){
 	char c1 = c;
 	return (c < 'A') ? c : (c1 &= ~' ');
 }
-
-
-
-
-
-
-
-
-
-
-
 
