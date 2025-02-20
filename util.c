@@ -96,7 +96,7 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 			t += 2;	
 		}
 	}
-	*bin_bytes = size;	
+	*bin_bytes = counter;	
 	((unsigned char *)buffer)[i] = '\0';
 	return buffer;
 }
@@ -105,7 +105,7 @@ int get_size(char *hex){
 	char *t;
 	int size = 0;
 	for (t = hex; *t !='\0'; t++){
-		if (*t != ' ' || *t != '\n'){
+		if (*t != ' ' &&  *t != '\n'){
 			size++;
 		}	
 	}
