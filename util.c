@@ -4,13 +4,13 @@
 
 int main(){
 	char str[19] = "zzzzzzzzzzzzzzzzzz";
-	char str2[] ="7A 7A 7A 7A";
+	char str2[] ="7t 7A 7A 7A";
 	char *hex_data = binary_to_hex(&str, 19);
 	ssize_t bin_bytes;
 	char *binary_data = hex_to_binary(str2, &bin_bytes);	
 
 	printf("%s\n", binary_data);
-	printf("%d\n", bin_bytes);
+	//printf("%d\n", bin_bytes);
 	// printf("%s", hex_data);
 	free(hex_data);
 	return 0;
@@ -77,15 +77,14 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 			char  low  = *(t+1);
 
 			//check for non-hex char for both nibbles
-			if(high < '0' || high > 'f'){
+			if(non_hex(high) == 1){
 				free(buffer);
 				return NULL;
 			}
-			if(low < '0' || low > 'f'){
+			if(non_hex(low) == 1){
 				free(buffer);
 				return NULL;
 			}
-
 
 			int higher_nibble = (high >= '0' && high <= '9') ? (high - '0') : (upper_case(high) + 10 - 'A');
 			int lower_nibble  = (low >= '0' && low <= '9') ? (low - '0') : (upper_case(low) + 10 - 'A');
@@ -116,4 +115,13 @@ char upper_case(char c){
 	c1 &= ~' ';
 	return c1;
 }
+int non_hex(char x){
+	if(!((x >= '0' && x <= '9') ||
+		 (x >='A' && x <= 'F') ||
+		 (x >= 'a' && x <='f'))){
+		return 1;
+	}
+	return 0;
+}
+
 
