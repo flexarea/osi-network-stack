@@ -8,8 +8,9 @@ int main(){
 	char *hex_data = binary_to_hex(&str, 19);
 	ssize_t bin_bytes;
 	char *binary_data = hex_to_binary(str2, &bin_bytes);	
-	}
-	printf("%s", binary_data);
+
+	printf("%s\n", binary_data);
+	printf("%d\n", bin_bytes);
 	// printf("%s", hex_data);
 	free(hex_data);
 	return 0;
@@ -57,7 +58,7 @@ char *binary_to_hex(void *data, ssize_t n){
 
 void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 	int size = get_size(hex);	
-	void *buffer = malloc(size);
+	void *buffer = malloc(size+1);
 	
 	if(buffer == NULL){
 		return NULL;
@@ -78,9 +79,9 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 			//check for non-hex char for both nibbles
 			if(high < '0' || high > 'f'){
 				free(buffer);
-				return null;
+				return NULL;
 			}
-			if(low < '0' || low > 'F'){
+			if(low < '0' || low > 'f'){
 				free(buffer);
 				return NULL;
 			}
@@ -89,14 +90,14 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 			int higher_nibble = (high >= '0' && high <= '9') ? (high - '0') : (upper_case(high) + 10 - 'A');
 			int lower_nibble  = (low >= '0' && low <= '9') ? (low - '0') : (upper_case(low) + 10 - 'A');
 
-			buffer[i] = (higher_nibble >> 4) | lower_nibble; //store ascii representation of hex value in buffer	
+			((unsigned char *)buffer)[i] = (higher_nibble << 4) | lower_nibble; //store ascii representation of hex value in buffer	
 			i++;
 			counter++;
 			t += 2;	
 		}
 	}
-	*bin_bytes = counter;	
-	buffer[i] = '\0';
+	*bin_bytes = size;	
+	((unsigned char *)buffer)[i] = '\0';
 	return buffer;
 }
 
@@ -104,7 +105,7 @@ int get_size(char *hex){
 	char *t;
 	int size = 0;
 	for (t = hex; *t !='\0'; t++){
-		if (*t == ' ' || *t == '\n'){
+		if (*t != ' ' || *t != '\n'){
 			size++;
 		}	
 	}
@@ -112,6 +113,7 @@ int get_size(char *hex){
 }
 char upper_case(char c){
 	char c1 = c;
-	return (c < 'A') ? c : (c1 &= ~' ');
+	c1 &= ~' ';
+	return c1;
 }
 
