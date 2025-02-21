@@ -2,25 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(){
-	char str[19] = "zzzzzzzzzzzzzzzzzz";
-	char str2[] ="7A 7A 7A 7A";
-	char *hex_data = binary_to_hex(&str, 19);
-	ssize_t *bin_bytes;
-	char *binary_data = hex_to_binary(str2, bin_bytes);	
-	
-	if(binary_data != NULL){
-		printf("%s\n", binary_data);
-	}else{
-		printf("Error: Invalid hex string\n");
-	}
-
-	//printf("%d\n", bin_bytes);
-	// printf("%s", hex_data);
-	free(hex_data);
-	free(binary_data);
-	return 0;
-}
 char *binary_to_hex(void *data, ssize_t n){
 	ssize_t n_line = (n /16) + 1; //calculate the number of \n to add to the buffer + last  \n
 	ssize_t length = (n*3) + n_line + 1; //considering pair representation per character 

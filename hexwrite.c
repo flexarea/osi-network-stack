@@ -24,8 +24,15 @@ int main(int argc, char *argv[]){
 
 		if(bytes > 0){
 			read_buffer[bytes] = '\0';
+			hex_data = binary_to_hex(read_buffer, bytes);
+			if(hex_data == NULL){
+				perror("binary_to_hex");
+				return 1;
+			}
+			free(hex_data);
 		}else{
 			printf("Error reading  input\n");
+			return 1;
 		}
 	}else{
 		//read file
@@ -48,7 +55,7 @@ int main(int argc, char *argv[]){
 
 		if((file_bytes = read(fd, file_buffer, file_size)) == -1){
 			perror("read");
-			free(file_buffer)
+			free(file_buffer);
 			close(fd);
 			return 1;
 		}

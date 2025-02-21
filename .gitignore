@@ -1,3 +1,4 @@
 # Ignore executables
 !*.c
 !Makefile
+backup.c
