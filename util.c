@@ -105,5 +105,3 @@ int non_hex(char x){
 	}
 	return 0;
 }
-
-
