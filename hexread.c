@@ -14,6 +14,7 @@ int main(int argc, char *argv[]){
 	ssize_t *bin_bytes;
 	char *file_buffer;
 	char *binary_data;
+	ssize_t bytes_written;
 
 	//handle no file provided (read stdin)
 	if (argc == 1){
@@ -49,6 +50,13 @@ int main(int argc, char *argv[]){
 		if(binary_data == NULL){
 			perror("hex_to_binary");
 			free(file_buffer);
+			close(fd);
+			return 1;
+		}
+		if((bytes_written = write(1, binary_data, *bin_bytes)) == -1){
+			perror("write");
+			free(file_buffer);
+			free(binary_data);
 			close(fd);
 			return 1;
 		}
