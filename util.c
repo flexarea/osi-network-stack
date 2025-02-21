@@ -15,10 +15,6 @@ char *binary_to_hex(void *data, ssize_t n){
 	ssize_t hex_counter = 0;
 
 	while(i < n ){
-		if (((char *) data)[i] == '\0'){
-			break;
-		}
-
 		if(hex_counter % 16 == 0 && hex_counter != 0){
 			buffer[j] = '\n'; //add new line
 			j++;
@@ -51,7 +47,6 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 		return NULL;
 	}
 
-	char hex_1, hex_2;
 	ssize_t i = 0;
 	ssize_t counter = 0;
 	char *t = hex; //copy hex
