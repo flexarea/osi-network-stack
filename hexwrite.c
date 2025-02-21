@@ -10,6 +10,7 @@
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
 	int fd;
+	char *file_buffer;
 	ssize_t file_size;
 	ssize_t file_bytes;
 	char *hex_data;
@@ -37,18 +38,37 @@ int main(int argc, char *argv[]){
 			return 1;
 		}
 		file_size = file_stat.st_size;
-		char *file_buffer = malloc(file_size);
+		file_buffer = malloc(file_size);
+
+		if(file_buffer == NULL){
+			perror("malloc");
+			close(fd);
+			return 1;
+		}
 
 		if((file_bytes = read(fd, file_buffer, file_size)) == -1){
+			perror("read");
+			free(file_buffer)
+			close(fd);
 			return 1;
 		}
 		hex_data = binary_to_hex(file_buffer, file_bytes);
-		if((bytes_written = write(1, hex_data, strlen(hex_data))) == -1){
+		if(hex_data == NULL){
+			perror("binary_to_hex");
+			free(file_buffer);
+			close(fd);
 			return 1;
 		}
+		if((bytes_written = write(1, hex_data, strlen(hex_data))) == -1){
+			perror("write");
+			free(file_buffer);
+			free(hex_data);
+			close(fd);
+			return 1;
+		}
+		free(file_buffer);
+		free(hex_data);
+		close(fd);
 	}
-	free(file_buffer);
-	free(hex_data);
-	close(fd);
 	return 0;
 }
