@@ -6,6 +6,9 @@
 #include <fcntl.h>
 #include "util.h"
 #include <string.h>
+#include <signal.h>
+
+int sig_val = 0;
 
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
@@ -15,24 +18,51 @@ int main(int argc, char *argv[]){
 	ssize_t file_bytes;
 	char *hex_data;
 	ssize_t bytes_written;
+	char *stdin_buffer;
 
 	//handle no file provided
 	if (argc == 1){
-		int max = 256;
-		char read_buffer[max];
-		int bytes = read(0, read_buffer, max-1); 
+		int max = 16;
+		stdin_buffer = malloc(sizeof(max));
+		int bytes;
+		
+		if(signal(SIGINT, handle_sigint) == SIG_ERR){
+			perror("Signal");
+			free(stdin_buffer);
+			free(hex_data);
+			return 1;
+		}
 
-		if(bytes > 0){
-			read_buffer[bytes] = '\0';
-			hex_data = binary_to_hex(read_buffer, bytes);
-			if(hex_data == NULL){
-				perror("binary_to_hex");
+		// process running here
+		while(1){
+			bytes = read(0, stdin_buffer, 16);
+			if (sig_val == 1){
+				kill(getpid(), SIGTERM);
+			}
+			sleep(1);
+
+			if(bytes > 0){
+				if(bytes = 16){
+					hex_data = binary_to_hex(read_buffer, bytes); //convert binary to hex
+					if((bytes_written = write(1, hex_data, strlen(hex_data))) == -1){ //write to stdout
+						perror("write");
+						free(stdin_buffer);
+						free(hex_data);
+						return 1;
+					}
+					//free buffers to continuer reading
+					free(hex_data);
+					free(stdin_buffer);
+					if(hex_data == NULL){
+						perror("binary_to_hex");
+						return 1;
+					}
+				}
+			free(hex_data);
+			}else{
+				printf("Error reading  input\n");
 				return 1;
 			}
-			free(hex_data);
-		}else{
-			printf("Error reading  input\n");
-			return 1;
 		}
 	}else{
 		//read file
@@ -78,4 +108,8 @@ int main(int argc, char *argv[]){
 		close(fd);
 	}
 	return 0;
+}
+
+void handler(int sig){
+	sig_val = 1;
 }
