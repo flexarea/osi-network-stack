@@ -36,12 +36,17 @@ int main(int argc, char *argv[]){
 		}
 		if(stat(argv[1], &file_stat) == -1){
 			perror("stat");
+			close(fd);
 		}
 		file_size = file_stat.st_size;
-		char file_buffer[file_size];
-		file_bytes = read(fd, file_buffer, file_size);
-		binary_data = hex_to_binary(*file_buffer, bin_bytes);
+		char *file_buffer = malloc(file_size);
+		if((file_bytes = read(fd, file_buffer, file_size)) == -1){
+			return 1;
+		};
+		binary_data = hex_to_binary(file_buffer, bin_bytes);
 	}
+	free(file_buffer);
+	free(binary_data);
 	close(fd);
 	return 0;
 }

@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include "util.h"
+#include <string.h>
 
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
@@ -21,11 +22,10 @@ int main(int argc, char *argv[]){
 		int bytes = read(0, read_buffer, max-1); 
 
 		if(bytes > 0){
-			read_buffer[max-1] = '\0';
+			read_buffer[bytes] = '\0';
 		}else{
 			printf("Error reading  input\n");
 		}
-		close(0);
 	}else{
 		//read file
 		if((fd = open(argv[1], O_RDONLY)) == -1){
@@ -33,17 +33,22 @@ int main(int argc, char *argv[]){
 		}
 		if(stat(argv[1], &file_stat) == -1){
 			perror("stat");
+			close(fd);
+			return 1;
 		}
 		file_size = file_stat.st_size;
-		char file_buffer[file_size];
+		char *file_buffer = malloc(file_size);
+
 		if((file_bytes = read(fd, file_buffer, file_size)) == -1){
 			return 1;
 		}
-		hex_data = binary_to_hex(*file_buffer, file_bytes);
-		if((bytes_written = write(1, hex_data, file_bytes)) == -1){
+		hex_data = binary_to_hex(file_buffer, file_bytes);
+		if((bytes_written = write(1, hex_data, strlen(hex_data))) == -1){
 			return 1;
 		}
 	}
+	free(file_buffer);
+	free(hex_data);
 	close(fd);
 	return 0;
 }
