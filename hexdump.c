@@ -39,20 +39,22 @@ int main(int argc, char *argv[]){
 			}
 			ssize_t bytes = read(0, stdin_buffer, max);
 			if(bytes > 0){
-				hex_data = binary_to_hex(stdin_buffer, bytes); //convert binary to hex
-				if(hex_data == NULL){
-					perror("binary_to_hex");
-					return 1;
-				}
-				//write data to stdout
-				if((bytes_written = write(1, hex_data, strlen(hex_data))) == -1){ 
-					perror("write");
-					free(stdin_buffer);
+				if(bytes == 16){
+					hex_data = binary_to_hex(stdin_buffer, bytes); //convert binary to hex
+					if(hex_data == NULL){
+						perror("binary_to_hex");
+						return 1;
+					}
+					//write data to stdout
+					if((bytes_written = write(1, hex_data, strlen(hex_data))) == -1){ 
+						perror("write");
+						free(stdin_buffer);
+						free(hex_data);
+						return 1;
+					}
+					//free buffers to continuer reading
 					free(hex_data);
-					return 1;
 				}
-				//free buffers to continuer reading
-				free(hex_data);
 			} else if (bytes == 0){
 				break;
 			}else{
