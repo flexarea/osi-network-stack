@@ -46,7 +46,7 @@ int main(int argc, char *argv[]){
 					temp_buffer[byte_counter++] = stdin_buffer[i];
 
 					if(byte_counter == 16){
-						hex_data = binary_to_hex(temp_buffer, bytes); //convert binary to hex
+						hex_data = binary_to_hex(temp_buffer, 16); //convert binary to hex
 						if(hex_data == NULL){
 							perror("binary_to_hex");
 							return 1;
