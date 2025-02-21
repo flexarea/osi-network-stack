@@ -60,7 +60,6 @@ int main(int argc, char *argv[]){
 			close(fd);
 			return 1;
 		}
-		write(1, "\n", 1);
 		free(file_buffer);
 		free(binary_data);
 		close(fd);

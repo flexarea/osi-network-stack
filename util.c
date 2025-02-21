@@ -41,7 +41,7 @@ char *binary_to_hex(void *data, ssize_t n){
 
 void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 	int size = get_size(hex);	
-	void *buffer = malloc(size+1);
+	void *buffer = malloc(size);
 	
 	if(buffer == NULL){
 		return NULL;
@@ -78,7 +78,6 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 		}
 	}
 	*bin_bytes = counter;	
-	((unsigned char *)buffer)[i] = '\0';
 	return buffer;
 }
 
