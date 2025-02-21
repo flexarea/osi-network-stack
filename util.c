@@ -18,6 +18,7 @@ int main(){
 	//printf("%d\n", bin_bytes);
 	// printf("%s", hex_data);
 	free(hex_data);
+	free(binary_data);
 	return 0;
 }
 char *binary_to_hex(void *data, ssize_t n){

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include 'util.h'
 
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
@@ -11,7 +12,6 @@ int main(int argc, char *argv[]){
 	ssize_t file_bytes;
 	ssize_t *bin_bytes;
 	char *binary_data;
-	ssize_t bytes_written;
 
 	if(file == NULL){
 		perror("Unable to open file");
@@ -21,14 +21,13 @@ int main(int argc, char *argv[]){
 	//handle no file provided (read stdin)
 	if (argc == 1){
 		int max = 256;
-		char read_buffer[256];
-		int bytes = read(0, *read_buffer, sizeof(max)-1);
+		char read_buffer[max];
+		int bytes = read(0, read_buffer, max-1);
 
 		if(bytes > 0){
-			read_buffer[max] = '\0';
-			close(0);
+			read_buffer[max-1] = '\0';
 		}else{
-			printf("Error reading  input\n")
+			printf("Error reading  input\n");
 		}
 	}else{
 		//read file
@@ -40,10 +39,8 @@ int main(int argc, char *argv[]){
 		}
 		file_size = file_stat.st_size;
 		char file_buffer[file_size];
-		file_bytes = read(fd, *file_buffer, file_size);
+		file_bytes = read(fd, file_buffer, file_size);
 		binary_data = hex_to_binary(*file_buffer, bin_bytes);
-		//write to stdout
-		bytes_written = write(1, binary_data, file_bytes);	
 	}
 	close(fd);
 	return 0;
