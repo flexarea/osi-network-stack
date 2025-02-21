@@ -11,7 +11,7 @@ int main(int argc, char *argv[]){
 	int fd;
 	ssize_t file_size;
 	ssize_t file_bytes;
-	ssize_t *bin_bytes;
+	ssize_t bin_bytes;
 	char *file_buffer;
 	char *binary_data;
 	ssize_t bytes_written;
@@ -39,27 +39,28 @@ int main(int argc, char *argv[]){
 			close(fd);
 		}
 		file_size = file_stat.st_size;
-		file_buffer = malloc(file_size);
+		file_buffer = malloc(file_size + 1);
 		if((file_bytes = read(fd, file_buffer, file_size)) == -1){
 			perror("write");
 			free(file_buffer);
 			close(fd);
 			return 1;
 		};
-		binary_data = hex_to_binary(file_buffer, bin_bytes);
+		binary_data = hex_to_binary(file_buffer, &bin_bytes);
 		if(binary_data == NULL){
 			perror("hex_to_binary");
 			free(file_buffer);
 			close(fd);
 			return 1;
 		}
-		if((bytes_written = write(1, binary_data, *bin_bytes)) == -1){
+		if((bytes_written = write(1, binary_data, bin_bytes)) == -1){
 			perror("write");
 			free(file_buffer);
 			free(binary_data);
 			close(fd);
 			return 1;
 		}
+		write(1, "\n", 1);
 		free(file_buffer);
 		free(binary_data);
 		close(fd);
