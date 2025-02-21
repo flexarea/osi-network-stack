@@ -46,6 +46,7 @@ int main(int argc, char *argv[]){
 			close(fd);
 			return 1;
 		};
+		file_buffer[file_bytes] = '\0';
 		binary_data = hex_to_binary(file_buffer, &bin_bytes);
 		if(binary_data == NULL){
 			perror("hex_to_binary");
