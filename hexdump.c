@@ -8,7 +8,7 @@
 #include <string.h>
 #include <signal.h>
 
-volatile sig_atomic_t sig_val = 0;
+volatile sig_atomic_t sig_val = 1;
 
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
@@ -19,6 +19,17 @@ int main(int argc, char *argv[]){
 	char *hex_data;
 	ssize_t bytes_written;
 	char *stdin_buffer;
+
+	//signal handling
+	struct sigaction sa;
+	sa.sa_handler = handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	
+	if(sigaction(SIGINT, &sa, NULL) == -1) {
+		perror("sigaction");
+		return 1;
+	}
 
 	//handle no file provided
 	if (argc == 1){
@@ -34,11 +45,7 @@ int main(int argc, char *argv[]){
 		}
 
 		// process running here
-		while(1){
-			if (sig_val == 1){
-				free(stdin_buffer);
-				return 0;
-			}
+		while(sig_val){
 			ssize_t bytes = read(0, stdin_buffer, max);
 			if(bytes > 0){
 				//copy read bytes into byte-counter
@@ -121,6 +128,6 @@ int main(int argc, char *argv[]){
 
 void handler(int sig){
 	if(sig == SIGINT){
-		sig_val = 1;
+		sig_val = 0;
 	}
 }
