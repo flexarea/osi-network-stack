@@ -5,6 +5,9 @@
 #include <sys/types.h>
 #include "util.h"
 #include <fcntl.h>
+#include <signal.h>
+
+volatile sig_atomic_t sig_val = 0;
 
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
@@ -15,18 +18,62 @@ int main(int argc, char *argv[]){
 	char *file_buffer;
 	char *binary_data;
 	ssize_t bytes_written;
+	char *stdin_buffer;
 
 	//handle no file provided (read stdin)
-	if (argc == 1){
-		int max = 256;
-		char read_buffer[max];
-		int bytes = read(0, read_buffer, max-1);
 
-		if(bytes > 0){
-			read_buffer[bytes] = '\0';
-		}else{
-			printf("Error reading  input\n");
+	if (argc == 1){
+		int max = 16;
+		stdin_buffer = malloc(sizeof(max));
+		ssize_t byte_counter = 0;
+		char temp_buffer[16];
+
+		if(signal(SIGINT, handler) == SIG_ERR){
+			perror("Signal");
+			free(stdin_buffer);
+			return 1;
 		}
+
+		// process running here
+		while(1){
+			if (sig_val == 1){
+				free(stdin_buffer);
+				return 0;
+			}
+			ssize_t bytes = read(0, stdin_buffer, max);
+			if(bytes > 0){
+				//copy read bytes into byte-counter
+				for (ssize_t i=0; i < bytes; i++){
+					temp_buffer[byte_counter++] = stdin_buffer[i];
+
+					if(byte_counter == 16){
+						binary_data = hex_to_binary(temp_buffer, &bin_bytes); //convert binary to hex
+						if(binary_data == NULL){
+							perror("hex_to_binary");
+							return 1;
+						}
+						//write data to stdout
+						if((bytes_written = write(1, binary_data, bin_bytes)) == -1){ 
+							perror("write");
+							free(stdin_buffer);
+							free(binary_data);
+							return 1;
+						}
+						//free buffers to continuer reading
+						free(binary_data);
+						//reset 
+						byte_counter = 0;
+					}
+				}
+			} else if (bytes == 0){
+				break;
+			}else{
+				perror("read");
+				free(stdin_buffer);
+				return 1;
+			}
+		}
+		free(stdin_buffer);
 	}else{
 		//read file
 		if((fd = open(argv[1], O_RDONLY)) == -1){
@@ -66,4 +113,10 @@ int main(int argc, char *argv[]){
 		close(fd);
 	}
 	return 0;
+}
+
+void handler(int sig){
+	if(sig == SIGINT){
+		sig_val = 1;
+	}
 }
