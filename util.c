@@ -6,8 +6,8 @@ int main(){
 	char str[19] = "zzzzzzzzzzzzzzzzzz";
 	char str2[] ="7A 7A 7A 7A";
 	char *hex_data = binary_to_hex(&str, 19);
-	ssize_t bin_bytes;
-	char *binary_data = hex_to_binary(str2, &bin_bytes);	
+	ssize_t *bin_bytes;
+	char *binary_data = hex_to_binary(str2, bin_bytes);	
 	
 	if(binary_data != NULL){
 		printf("%s\n", binary_data);
