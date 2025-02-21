@@ -3,7 +3,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include 'util.h'
+#include "util.h"
+#include <fcntl.h>
 
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
@@ -13,11 +14,6 @@ int main(int argc, char *argv[]){
 	ssize_t *bin_bytes;
 	char *file_buffer;
 	char *binary_data;
-
-	if(file == NULL){
-		perror("Unable to open file");
-		exit(1);
-	}
 
 	//handle no file provided (read stdin)
 	if (argc == 1){
@@ -32,8 +28,10 @@ int main(int argc, char *argv[]){
 		}
 	}else{
 		//read file
-		if((fd = open(argv[1], O_RDONLY))){
-			return NULL;	
+		if((fd = open(argv[1], O_RDONLY)) == -1){
+			perror("open");
+			close(fd);
+			return 1;
 		}
 		if(stat(argv[1], &file_stat) == -1){
 			perror("stat");
