@@ -78,7 +78,7 @@ int main(int argc, char *argv[]){
 			}
 		}
 		//flush buffer to stdout
-		if(sizeof(stdin_buffer) > 0){
+		if(byte_counter > 0){
 			hex_data = binary_to_hex(stdin_buffer, byte_counter);
 			if(hex_data == NULL){
 				perror("binary_to_hex");
@@ -91,9 +91,9 @@ int main(int argc, char *argv[]){
 				free(hex_data);
 				return 1;
 			}
+			free(hex_data);
 
 		}
-		free(hex_data);
 		free(stdin_buffer);
 	}else{
 		//read file
