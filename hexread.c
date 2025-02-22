@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <string.h>
+#include <errno.h>
+#include <ctype.h>
 
 volatile sig_atomic_t sig_val = 1;
 
@@ -17,8 +19,7 @@ int main(int argc, char *argv[]){
 	ssize_t file_bytes;
 	ssize_t bin_bytes;
 	char *file_buffer;
-	char *binary_data;
-	ssize_t bytes_written;
+	char *binary_data; ssize_t bytes_written;
 	char *stdin_buffer;
 
 	//signal handling
@@ -34,26 +35,31 @@ int main(int argc, char *argv[]){
 
 	//handle no file provided
 	if (argc == 1){
-		int max = 17;
-		stdin_buffer = malloc(sizeof(max));
+		int max = 33;
+		stdin_buffer = malloc(max);
 		ssize_t byte_counter = 0;
-		char temp_buffer[17];
+		char temp_buffer[33];
 
 		// process running here
 		while(sig_val){
-			ssize_t bytes = read(0, stdin_buffer, 16);
+			ssize_t bytes = read(0, stdin_buffer, 32);
 			if(bytes > 0){
 				//copy read bytes into byte-counter
 				for (ssize_t i=0; i < bytes; i++){
-					temp_buffer[byte_counter++] = stdin_buffer[i];
+					if(isspace(stdin_buffer[i])){
+						continue;
+					}else{
+						temp_buffer[byte_counter++] = stdin_buffer[i];
+					}
 
-					if(byte_counter == 16){
+					if(byte_counter == 32){
 						//the only way too fix this is either by adding \0 at the end of the buffer
 						//or stripping off the \n at the end of the buffer, which wouldn't make sense cause we don't do that for hexdump
-						char null_terminated_buffer[17];
-						memcpy(null_terminated_buffer, temp_buffer, 16);
-						null_terminated_buffer[16] = '\0';
+						char null_terminated_buffer[33];
+						memcpy(null_terminated_buffer, temp_buffer, 32);
+						null_terminated_buffer[32] = '\0';
 						binary_data = hex_to_binary(null_terminated_buffer, &bin_bytes); //convert binary to hex
+
 						if(binary_data == NULL){
 							perror("hex_to_binary");
 							free(stdin_buffer);
@@ -67,6 +73,7 @@ int main(int argc, char *argv[]){
 							free(binary_data);
 							return 1;
 						}
+						write(1, "\n", 1);
 						//free buffers to continuer reading
 						free(binary_data);
 						//reset 
@@ -75,6 +82,8 @@ int main(int argc, char *argv[]){
 				}
 			} else if (bytes == 0){
 				break;
+			} else if (errno == EINTR){
+				continue;
 			}else{
 				perror("read");
 				free(stdin_buffer);

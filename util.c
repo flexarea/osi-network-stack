@@ -32,9 +32,13 @@ char *binary_to_hex(void *data, ssize_t n){
 		hex_counter += 1; // increment hex_
 
 		if(i != n - 1){
+			if(hex_counter % 16 == 0 && hex_counter != 0){
+				j += 2;
+			}else{
 
-			buffer[j+2] = ' ';
-			j += 3;
+				buffer[j+2] = ' ';
+				j += 3;
+			}
 		}else{
 			j += 2;
 		}
@@ -62,15 +66,15 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 		if(isspace(*t)){
 			t++;	
 		}else{
+			if(*(t+1) == '\0'){
+				free(buffer);
+				return NULL;
+			}
 			char  high = *t;
 			char  low  = *(t+1);
 
 			//check for non-hex char for both nibbles
-			if(non_hex(high) == 1){
-				free(buffer);
-				return NULL;
-			}
-			if(non_hex(low) == 1){
+			if(non_hex(high) || non_hex(low)){
 				free(buffer);
 				return NULL;
 			}
