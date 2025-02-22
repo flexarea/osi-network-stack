@@ -137,7 +137,7 @@ int main(int argc, char *argv[]){
 				//copy read bytes into byte-counter
 				ssize_t i = 0;
 				for (; i < bytes; i++){
-					if(isspace(file_buffer[i])){
+					if(!isspace(file_buffer[i])){
 						valid_hex_counter++;
 					}
 					temp_buffer[byte_counter++] = file_buffer[i];
@@ -166,6 +166,7 @@ int main(int argc, char *argv[]){
 						free(binary_data);
 						//reset 
 						byte_counter = 0;
+						valid_hex_counter = 0;
 					}
 				}
 			} else if (bytes == 0){
