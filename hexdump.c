@@ -20,13 +20,14 @@ int main(int argc, char *argv[]){
 	char *hex_data;
 	ssize_t bytes_written;
 	char *stdin_buffer;
+	ssize_t bytes;
 
 	//signal handling
 	struct sigaction sa;
 	sa.sa_handler = handler;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
-	
+
 	if(sigaction(SIGINT, &sa, NULL) == -1) {
 		perror("sigaction");
 		return 1;
@@ -41,7 +42,7 @@ int main(int argc, char *argv[]){
 
 		// process running here
 		while(sig_val){
-			ssize_t bytes = read(0, stdin_buffer, max);
+			bytes = read(0, stdin_buffer, max);
 			if(bytes > 0){
 				//copy read bytes into byte-counter
 				for (ssize_t i=0; i < bytes; i++){
@@ -60,7 +61,7 @@ int main(int argc, char *argv[]){
 							free(hex_data);
 							return 1;
 						}
-						//free buffers to continuer reading
+						//free buffers to continue reading
 						free(hex_data);
 						//reset 
 						byte_counter = 0;
@@ -76,6 +77,23 @@ int main(int argc, char *argv[]){
 				return 1;
 			}
 		}
+		//flush buffer to stdout
+		if(sizeof(stdin_buffer) > 0){
+			hex_data = binary_to_hex(stdin_buffer, byte_counter);
+			if(hex_data == NULL){
+				perror("binary_to_hex");
+				free(stdin_buffer);
+				return 1;
+			}
+			if(write(1, hex_data, strlen(hex_data)) == -1){
+				perror("write");
+				free(stdin_buffer);
+				free(hex_data);
+				return 1;
+			}
+
+		}
+		free(hex_data);
 		free(stdin_buffer);
 	}else{
 		//read file
@@ -116,6 +134,8 @@ int main(int argc, char *argv[]){
 			close(fd);
 			return 1;
 		}
+		//dump remaining data from hex_data buffer
+
 		free(file_buffer);
 		free(hex_data);
 		close(fd);
