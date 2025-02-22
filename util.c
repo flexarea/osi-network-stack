@@ -8,13 +8,7 @@ char *binary_to_hex(void *data, ssize_t n){
 	ssize_t length = (n*3) + n_line + 1; //considering pair representation per character 
 	char *buffer = (char* ) malloc(length);
 
-	if(n == 0){
-		return buffer;
-	}
 
-	if(buffer == NULL){
-		return NULL;
-	}
 	ssize_t i = 0; //data iterator
 	ssize_t j = 0; //buffer iterator
 	ssize_t hex_counter = 0;
