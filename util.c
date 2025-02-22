@@ -1,6 +1,7 @@
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 char *binary_to_hex(void *data, ssize_t n){
 	ssize_t n_line = (n /16) + 1; //calculate the number of \n to add to the buffer + last  \n
@@ -52,7 +53,7 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 	char *t = hex; //copy hex
 
 	while(*t != '\0'){
-		if(*t == ' ' || *t == '\n'){
+		if(isspace(*t)){
 			t++;	
 		}else{
 			char  high = *t;
@@ -85,9 +86,9 @@ int get_size(char *hex){
 	char *t;
 	int size = 0;
 	for (t = hex; *t !='\0'; t++){
-		if (*t != ' ' &&  *t != '\n'){
+		if (!isspace(*t)){
 			size++;
-		}	
+		}
 	}
 	return size;
 }

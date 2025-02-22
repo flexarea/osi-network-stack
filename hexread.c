@@ -6,6 +6,7 @@
 #include "util.h"
 #include <fcntl.h>
 #include <signal.h>
+#include <string.h>
 
 volatile sig_atomic_t sig_val = 1;
 
@@ -33,14 +34,14 @@ int main(int argc, char *argv[]){
 
 	//handle no file provided
 	if (argc == 1){
-		int max = 16;
+		int max = 17;
 		stdin_buffer = malloc(sizeof(max));
 		ssize_t byte_counter = 0;
-		char temp_buffer[16];
+		char temp_buffer[17];
 
 		// process running here
 		while(sig_val){
-			ssize_t bytes = read(0, stdin_buffer, max);
+			ssize_t bytes = read(0, stdin_buffer, 16);
 			if(bytes > 0){
 				//copy read bytes into byte-counter
 				for (ssize_t i=0; i < bytes; i++){
@@ -49,7 +50,10 @@ int main(int argc, char *argv[]){
 					if(byte_counter == 16){
 						//the only way too fix this is either by adding \0 at the end of the buffer
 						//or stripping off the \n at the end of the buffer, which wouldn't make sense cause we don't do that for hexdump
-						binary_data = hex_to_binary(temp_buffer, &bin_bytes); //convert binary to hex
+						char null_terminated_buffer[17];
+						memcpy(null_terminated_buffer, temp_buffer, 16);
+						null_terminated_buffer[16] = '\0';
+						binary_data = hex_to_binary(null_terminated_buffer, &bin_bytes); //convert binary to hex
 						if(binary_data == NULL){
 							perror("hex_to_binary");
 							free(stdin_buffer);
