@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <ctype.h>
 
-volatile sig_atomic_t sig_val = 1;
 
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
@@ -24,16 +23,6 @@ int main(int argc, char *argv[]){
 	char *stdin_buffer;
 	ssize_t bytes;
 
-	//signal handling
-	struct sigaction sa;
-	sa.sa_handler = handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-	
-	if(sigaction(SIGINT, &sa, NULL) == -1) {
-		perror("sigaction");
-		return 1;
-	}
 
 	//handle no file provided
 	if (argc == 1){
@@ -44,7 +33,7 @@ int main(int argc, char *argv[]){
 		char temp_buffer[48];
 
 		// process running here
-		while(sig_val){
+		while(1){
 			ssize_t bytes = read(0, stdin_buffer, 48);
 			if(bytes > 0){
 				//copy read bytes into byte-counter
@@ -205,8 +194,3 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-void handler(int sig){
-	if(sig == SIGINT){
-		sig_val = 0;
-	}
-}
