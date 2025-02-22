@@ -92,8 +92,10 @@ int main(int argc, char *argv[]){
 		}
 		//flush buffer to stdout
 		if(byte_counter > 0){
-			stdin_buffer[byte_counter] = '\0';
-			binary_data = hex_to_binary(stdin_buffer, &bin_bytes);
+			char null_terminated_buffer[byte_counter + 1];
+			memcpy(null_terminated_buffer, temp_buffer, byte_counter);
+			null_terminated_buffer[byte_counter] = '\0';
+			binary_data = hex_to_binary(null_terminated_buffer, &bin_bytes);
 			if(binary_data == NULL){
 				perror("binary_to_hex");
 				free(stdin_buffer);
@@ -144,6 +146,7 @@ int main(int argc, char *argv[]){
 			close(fd);
 			return 1;
 		}
+		write(1, "\n", 1);
 		free(file_buffer);
 		free(binary_data);
 		close(fd);
