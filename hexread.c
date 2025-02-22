@@ -198,10 +198,8 @@ int main(int argc, char *argv[]){
 			free(binary_data);
 
 		}
-	//new code ends here
 		write(1, "\n", 1);
 		free(file_buffer);
-		free(binary_data);
 		close(fd);
 	}
 	return 0;
