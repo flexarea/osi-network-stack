@@ -3,3 +3,5 @@
 !Makefile
 backup.c
 *.core
+hex
+txt

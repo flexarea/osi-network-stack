@@ -47,9 +47,13 @@ int main(int argc, char *argv[]){
 					temp_buffer[byte_counter++] = stdin_buffer[i];
 
 					if(byte_counter == 16){
+						//the only way too fix this is either by adding \0 at the end of the buffer
+						//or stripping off the \n at the end of the buffer, which wouldn't make sense cause we don't do that for hexdump
 						binary_data = hex_to_binary(temp_buffer, &bin_bytes); //convert binary to hex
 						if(binary_data == NULL){
 							perror("hex_to_binary");
+							free(stdin_buffer);
+							free(binary_data);
 							return 1;
 						}
 						//write data to stdout
