@@ -90,6 +90,25 @@ int main(int argc, char *argv[]){
 				return 1;
 			}
 		}
+		//flush buffer to stdout
+		if(byte_counter > 0){
+			stdin_buffer[byte_counter] = '\0';
+			binary_data = hex_to_binary(stdin_buffer, &bin_bytes);
+			if(binary_data == NULL){
+				perror("binary_to_hex");
+				free(stdin_buffer);
+				return 1;
+			}
+			if(write(1, binary_data, bin_bytes) == -1){
+				perror("write");
+				free(stdin_buffer);
+				free(binary_data);
+				return 1;
+			}
+			write(1, "\n", 1);
+			free(binary_data);
+
+		}
 		free(stdin_buffer);
 	}else{
 		//read file

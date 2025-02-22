@@ -74,6 +74,7 @@ void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 		if(isspace(*t)){
 			t++;	
 		}else{
+			//check for complete (valid) hex pair
 			if(*(t+1) == '\0'){
 				free(buffer);
 				return NULL;
