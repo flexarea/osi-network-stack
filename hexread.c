@@ -37,27 +37,27 @@ int main(int argc, char *argv[]){
 
 	//handle no file provided
 	if (argc == 1){
-		int max = 33;
+		int max = 1024;
 		stdin_buffer = malloc(max);
 		ssize_t byte_counter = 0;
-		char temp_buffer[33];
+		ssize_t valid_hex_counter = 0;
+		char temp_buffer[48];
 
 		// process running here
 		while(sig_val){
-			ssize_t bytes = read(0, stdin_buffer, 32);
+			ssize_t bytes = read(0, stdin_buffer, 48);
 			if(bytes > 0){
 				//copy read bytes into byte-counter
 				for (ssize_t i=0; i < bytes; i++){
-					if(isspace(stdin_buffer[i])){
-						continue;
-					}else{
-						temp_buffer[byte_counter++] = stdin_buffer[i];
+					if(!isspace(stdin_buffer[i])){
+						valid_hex_counter++;
 					}
+					temp_buffer[byte_counter++] = stdin_buffer[i];
 
-					if(byte_counter == 32){
-						char null_terminated_buffer[33];
-						memcpy(null_terminated_buffer, temp_buffer, 32);
-						null_terminated_buffer[32] = '\0';
+					if(valid_hex_counter == 32){
+						char null_terminated_buffer[byte_counter+1];
+						memcpy(null_terminated_buffer, temp_buffer, byte_counter);
+						null_terminated_buffer[byte_counter] = '\0';
 						binary_data = hex_to_binary(null_terminated_buffer, &bin_bytes); //convert binary to hex
 
 						if(binary_data == NULL){
@@ -78,6 +78,7 @@ int main(int argc, char *argv[]){
 						free(binary_data);
 						//reset 
 						byte_counter = 0;
+						valid_hex_counter = 0;
 					}
 				}
 			} else if (bytes == 0){
