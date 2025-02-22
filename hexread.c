@@ -15,12 +15,14 @@ volatile sig_atomic_t sig_val = 1;
 int main(int argc, char *argv[]){
 	struct stat file_stat;	
 	int fd;
-	ssize_t file_size;
-	ssize_t file_bytes;
+	//ssize_t file_size;
+	//ssize_t file_bytes;
 	ssize_t bin_bytes;
 	char *file_buffer;
-	char *binary_data; ssize_t bytes_written;
+	char *binary_data;
+	ssize_t bytes_written;
 	char *stdin_buffer;
+	ssize_t bytes;
 
 	//signal handling
 	struct sigaction sa;
@@ -53,8 +55,6 @@ int main(int argc, char *argv[]){
 					}
 
 					if(byte_counter == 32){
-						//the only way too fix this is either by adding \0 at the end of the buffer
-						//or stripping off the \n at the end of the buffer, which wouldn't make sense cause we don't do that for hexdump
 						char null_terminated_buffer[33];
 						memcpy(null_terminated_buffer, temp_buffer, 32);
 						null_terminated_buffer[32] = '\0';
@@ -123,29 +123,80 @@ int main(int argc, char *argv[]){
 			perror("stat");
 			close(fd);
 		}
-		file_size = file_stat.st_size;
-		file_buffer = malloc(file_size + 1);
-		if((file_bytes = read(fd, file_buffer, file_size)) == -1){
-			perror("write");
-			free(file_buffer);
-			close(fd);
-			return 1;
-		};
-		file_buffer[file_bytes] = '\0';
-		binary_data = hex_to_binary(file_buffer, &bin_bytes);
-		if(binary_data == NULL){
-			perror("hex_to_binary");
-			free(file_buffer);
-			close(fd);
-			return 1;
+		int max = 1024;
+		ssize_t byte_counter = 0;
+
+		file_buffer = malloc(max);
+		char temp_buffer[48]; //if non-hex is included 16 valid hex aligned will never be more than 48 characters
+		ssize_t valid_hex_counter = 0; //to include any character
+
+		//new code start here
+		while(1){
+		bytes = read(fd, file_buffer, max);
+			if(bytes > 0){
+				//copy read bytes into byte-counter
+				ssize_t i = 0;
+				for (; i < bytes; i++){
+					if(isspace(file_buffer[i])){
+						valid_hex_counter++;
+					}
+					temp_buffer[byte_counter++] = file_buffer[i];
+
+					if(valid_hex_counter == 32){
+						char null_terminated_buffer[byte_counter+1];
+						memcpy(null_terminated_buffer, temp_buffer, byte_counter);
+						null_terminated_buffer[byte_counter] = '\0';
+						binary_data = hex_to_binary(null_terminated_buffer, &bin_bytes); //convert binary to hex
+
+						if(binary_data == NULL){
+							perror("hex_to_binary");
+							free(file_buffer);
+							free(binary_data);
+							return 1;
+						}
+						//write data to stdout
+						if((bytes_written = write(1, binary_data, bin_bytes)) == -1){ 
+							perror("write");
+							free(file_buffer);
+							free(binary_data);
+							return 1;
+						}
+						write(1, "\n", 1);
+						//free buffers to continuer reading
+						free(binary_data);
+						//reset 
+						byte_counter = 0;
+					}
+				}
+			} else if (bytes == 0){
+				break;
+			}else{
+				perror("read");
+				free(file_buffer);
+				return 1;
+			}
 		}
-		if((bytes_written = write(1, binary_data, bin_bytes)) == -1){
-			perror("write");
-			free(file_buffer);
+		//flush buffer to stdout
+		if(byte_counter > 0){
+			char null_terminated_buffer[byte_counter + 1];
+			memcpy(null_terminated_buffer, temp_buffer, byte_counter);
+			null_terminated_buffer[byte_counter] = '\0';
+			binary_data = hex_to_binary(null_terminated_buffer, &bin_bytes);
+			if(binary_data == NULL){
+				perror("hex_to_binary");
+				free(file_buffer);
+				return 1;
+			}
+			if(write(1, binary_data, bin_bytes) == -1){
+				perror("write");
+				free(file_buffer);
+				free(binary_data);
+				return 1;
+			}
 			free(binary_data);
-			close(fd);
-			return 1;
+
 		}
+	//new code ends here
 		write(1, "\n", 1);
 		free(file_buffer);
 		free(binary_data);
