@@ -8,6 +8,10 @@ char *binary_to_hex(void *data, ssize_t n){
 	ssize_t length = (n*3) + n_line + 1; //considering pair representation per character 
 	char *buffer = (char* ) malloc(length);
 
+	if(n == 0){
+		return buffer;
+	}
+
 	if(buffer == NULL){
 		return NULL;
 	}
@@ -53,6 +57,10 @@ char *binary_to_hex(void *data, ssize_t n){
 void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 	int size = get_size(hex);	
 	void *buffer = malloc(size);
+
+	if(size == 0){
+		return buffer;
+	}
 
 	if(buffer == NULL){
 		return NULL;
