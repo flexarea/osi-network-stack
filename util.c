@@ -30,8 +30,14 @@ char *binary_to_hex(void *data, ssize_t n){
 		buffer[j+1] = (lower_nibble < 10) ? (lower_nibble + '0') : (lower_nibble - 10 + 'A');
 
 		hex_counter += 1; // increment hex_
-		buffer[j+2] = ' ';
-		j += 3;
+
+		if(i != n - 1){
+
+			buffer[j+2] = ' ';
+			j += 3;
+		}else{
+			j += 2;
+		}
 		i++;
 	}
 
@@ -43,7 +49,7 @@ char *binary_to_hex(void *data, ssize_t n){
 void *hex_to_binary(char *hex, ssize_t *bin_bytes){
 	int size = get_size(hex);	
 	void *buffer = malloc(size);
-	
+
 	if(buffer == NULL){
 		return NULL;
 	}
@@ -99,8 +105,8 @@ char upper_case(char c){
 }
 int non_hex(char x){
 	if(!((x >= '0' && x <= '9') ||
-		 (x >='A' && x <= 'F') ||
-		 (x >= 'a' && x <='f'))){
+				(x >='A' && x <= 'F') ||
+				(x >= 'a' && x <='f'))){
 		return 1;
 	}
 	return 0;
