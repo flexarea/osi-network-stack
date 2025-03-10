@@ -21,8 +21,8 @@ main(int argc, char *argv[])
 
     int connect_to_remote_switch = 0;
     char *local_vde_cmd[] = { "vde_plug", NULL };
-    char *remote_vde_cmd[] = { "ssh", "pjohnson@weathertop.cs.middlebury.edu",
-                                      "/home/pjohnson/cs431/bin/vde_plug",
+    char *remote_vde_cmd[] = { "ssh", "entuyenabo@weathertop.cs.middlebury.edu",
+                                      "/home/entuyenabo/cs431/bin/vde_plug",
                                       NULL };
     char **vde_cmd = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd;
 
