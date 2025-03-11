@@ -89,9 +89,11 @@ void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, 
 	}else{
 		curr_frame->is_for_me = 0;
 	}
+	ssize_t bytes;
+	char *data_as_binary = hex_to_binary(data_as_hex, &bytes);
 
 	//compute checksum
-	uint32_t crc = crc32(0, data_as_hex, len-4);	
+	uint32_t crc = crc32(0, data_as_binary, len-4);	
 	curr_frame->rcv_check_sum = crc;
 	curr_frame->check_sum_match = (*curr_check_sum == crc) ? 1 : 0;
 	curr_frame->valid_length = (len < 64) ? 0 : 1;
