@@ -62,7 +62,7 @@ int main(int argc, char *argv[]){
 							free(binary_data);
 							return 1;
 						}
-						write(1, "\n", 1);
+						//write(1, "\n", 1);
 						//free buffers to continuer reading
 						free(binary_data);
 						//reset 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]){
 							free(binary_data);
 							return 1;
 						}
-						write(1, "\n", 1);
+						//write(1, "\n", 1);
 						//free buffers to continuer reading
 						free(binary_data);
 						//reset 
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]){
 			free(binary_data);
 
 		}
-		write(1, "\n", 1);
+		//write(1, "\n", 1);
 		free(file_buffer);
 		close(fd);
 	}

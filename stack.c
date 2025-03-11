@@ -50,6 +50,10 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 
 		//retrieve frame fields information
 		frame_f = (struct frame_fields *)frame;
+		//format
+		uint8_t f_src_addr[7];	
+		memcpy(f_src_addr, frame_f->src_addr, 6);
+		f_src_addr[6]= '\0';
 		handle_frame(data_as_hex, frame_len, frame_f,  curr_frame, data_size,  curr_check_sum, mac_addr, frame);
 
 
@@ -59,10 +63,8 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		}else if(curr_frame->valid_length == 0){
 			printf("ignoring %d-byte frame (short)\n", (int)frame_len);
 		}else if(curr_frame->is_broadcast){
-			uint8_t src[7];
-			memcpy(src, frame_f->src_addr, 6);
-			src[6] = '\0';
-			printf("received %d-byte broadcast frame from %s\n",(int)frame_len, frame_f->src_addr);
+			printf("this should print\n");
+			printf("received %d-byte broadcast frame from..\n",(int)frame_len);
 		}else if(curr_frame->is_for_me){
 			printf("received %d-byte broadcast frame from %s\n", (int)frame_len, frame_f->src_addr);
 		}
