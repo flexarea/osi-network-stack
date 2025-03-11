@@ -9,8 +9,7 @@
 #include "crc32.h"
 #include <arpa/inet.h>
 
-//const uint8_t eth_addr[] = {0x12,0x9f,0x41,0x0d,0x0e,0x64}; //Interface ethernet address
-const uint8_t eth_addr[] = {0x1f,0xff,0xff,0xff,0xff,0xff}; //Interface ethernet address
+const uint8_t eth_addr[] = {0x12,0x9f,0x41,0x0d,0x0e,0x63}; //Interface ethernet address
 
 int eth_cmp(struct frame_fields *frame_f,  const uint8_t *mac_addr);
 
@@ -64,24 +63,8 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 			continue;
 		}
 
-		printf("value of is for me %d\n", curr_frame->is_for_me);
-		/*
-		   if(curr_frame->is_broadcast){
-		   printf("this should print\n");
-		   printf("received %d-byte broadcast frame from %02x %02x %02x %02x %02x %02x\n", (int)frame_len, 
-		   frame_f->src_addr[0],
-		   frame_f->src_addr[1],
-		   frame_f->src_addr[2],
-		   frame_f->src_addr[3],
-		   frame_f->src_addr[4],
-		   frame_f->src_addr[5]);
-		   continue;
-		   }
-		   */	
-
-		/*
-		if(memcmp(frame_f->dest_addr,"\xff\xff\xff\xff\xff\xff",6) == 0){
-			printf("received %d-byte frame for me from %02x %02x %02x %02x %02x %02x\n", (int)frame_len, 
+		if(curr_frame->is_broadcast){
+			printf("received %d-byte broadcast frame from %02x %02x %02x %02x %02x %02x\n", (int)frame_len, 
 					frame_f->src_addr[0],
 					frame_f->src_addr[1],
 					frame_f->src_addr[2],
@@ -90,7 +73,17 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 					frame_f->src_addr[5]);
 			continue;
 		}
-		*/
+
+		   if(curr_frame->is_for_me){
+		   printf("received %d-byte frame for me from %02x %02x %02x %02x %02x %02x\n", (int)frame_len, 
+		   frame_f->src_addr[0],
+		   frame_f->src_addr[1],
+		   frame_f->src_addr[2],
+		   frame_f->src_addr[3],
+		   frame_f->src_addr[4],
+		   frame_f->src_addr[5]);
+		   continue;
+		   }
 
 		free(data_as_hex);
 	}
@@ -114,7 +107,7 @@ void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, 
 	}else{
 		curr_frame->is_broadcast = 0;
 	}
-    if(eth_cmp(frame_f, mac_addr) == 1){
+	if(eth_cmp(frame_f, mac_addr) == 1){
 		curr_frame->is_for_me = 1;
 	}else{
 		curr_frame->is_for_me = 0;
