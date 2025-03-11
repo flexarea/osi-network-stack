@@ -9,43 +9,59 @@
 
 #include "util.h"
 #include "cs431vde.h"
+#include "crc32.h"
 
 int
 main(int argc, char *argv[])
 {
-    int fds[2];
+	int fds[2];
+	ssize_t frame_len;
 
-    uint8_t frame[1600];
-    ssize_t frame_len;
+	uint8_t frame[1600] = {
+		0xff,0xff,0xff,0xff,0xff,0xff, //destination address
+		0x12,0x9f,0x41,0x0d,0x0e,0x64, //source address
+		0x12,0x9f,                    //type
+		'A','B','C','D','E','F','G','H',
+		'I','J','K','L','M','N','O','P',
+		'Q','R','S','T','U','V','W','X',
+		'Y','Z','A','B','C','D','E','F',
+		'G','H','I','J','K','L','M','N',
+		'O','P','Q','R','S','T','U','V',
+	};
 
-    int connect_to_remote_switch = 0;
-    char *local_vde_cmd[] = { "vde_plug", NULL };
-    char *remote_vde_cmd[] = { "ssh", "pjohnson@weathertop.cs.middlebury.edu",
-                                      "/home/pjohnson/cs431/bin/vde_plug",
-                                      NULL };
-    char **vde_cmd = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd;
 
-    if(connect_to_vde_switch(fds, vde_cmd) < 0) {
-        printf("Could not connect to switch, exiting.\n");
-        exit(1);
-    }
+	int connect_to_remote_switch = 0;
+	char *local_vde_cmd[] = { "vde_plug", NULL };
+	char *remote_vde_cmd[] = { "ssh", "pjohnson@weathertop.cs.middlebury.edu",
+		"/home/pjohnson/cs431/bin/vde_plug",
+		NULL };
+	char **vde_cmd = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd;
 
-    memset(frame, '\xff', 64);
-    frame_len = 64;
+	if(connect_to_vde_switch(fds, vde_cmd) < 0) {
+		printf("Could not connect to switch, exiting.\n");
+		exit(1);
+	}
 
-    printf("sending frame, length %ld\n", frame_len);
-    send_ethernet_frame(fds[1], frame, frame_len);
+	//memset(frame, '\xff', 64);
+	//compute cfs
+	uint32_t crc = crc32(0, frame, 62);	
+	uint8_t *cfs_ptr = (uint8_t *)frame + 62;
+	memcpy(cfs_ptr, &crc, 4);
+	frame_len = 66;
 
-    /* If the program exits immediately after sending its frames, there is a
-     * possibility the frames won't actually be delivered.  If, for example,
-     * the "remote_vde_cmd" above is used, the user might not even finish
-     * typing their password (which is accepted by a child process) before
-     * this process terminates, which would result in send frames not actually
-     * arriving.  Therefore, we pause and let the user manually end this
-     * process. */
+	printf("sending frame, length %ld\n", frame_len);
+	send_ethernet_frame(fds[1], frame, frame_len);
 
-    printf("Press Control-C to terminate sender.\n");
-    pause();
+	/* If the program exits immediately after sending its frames, there is a
+	 * possibility the frames won't actually be delivered.  If, for example,
+	 * the "remote_vde_cmd" above is used, the user might not even finish
+	 * typing their password (which is accepted by a child process) before
+	 * this process terminates, which would result in send frames not actually
+	 * arriving.  Therefore, we pause and let the user manually end this
+	 * process. */
 
-    return 0;
+	printf("Press Control-C to terminate sender.\n");
+	pause();
+
+	return 0;
 }

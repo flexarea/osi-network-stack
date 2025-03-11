@@ -1,7 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -g
 
-all: hexread hexdump stack
+#remember to add stack here
+all: hexread hexdump receiver sender stack
 
 hexread: hexread.o util.o
 	$(CC) $(CFLAGS) hexread.o util.o -o hexread
@@ -11,13 +12,17 @@ hexdump: hexdump.o util.o
 	$(CC) $(CFLAGS) hexdump.o util.o -o hexdump
 hexdump.o: hexdump.c util.h
 	$(CC) $(CFLAGS) -c hexdump.c -o hexdump.o
-stack: stack.o util.o
-	$(CC) $(CFLAGS) stack.o util.o -o stack
+stack: stack.o util.o cs431vde.c crc32.c
+	$(CC) $(CFLAGS) stack.o util.o cs431vde.c crc32.c -o stack
 stack.o: stack.c util.h
 	$(CC) $(CFLAGS) -c stack.c -o stack.o
+sender: sender.c cs431vde.c util.o
+	$(CC) $(CFLAGS) sender.c cs431vde.c crc32.c util.o -o sender
+receiver: receiver.c cs431vde.c util.o
+	$(CC) $(CFLAGS) receiver.c cs431vde.c util.o -o receiver
 util.o: util.c util.h
 	$(CC) $(CFLAGS) -c util.c -o util.o
 
 .PHONY:clean
 clean:
-	rm -f *.o hexread hexdump
+	rm -f *.o hexread hexdump receiver sender stack

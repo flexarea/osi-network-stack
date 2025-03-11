@@ -2,15 +2,27 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include "util.h"
+#include "stack.h"
 #include "cs431vde.h"
+#include "crc32.h"
 
 
+const char eth_addr[] = {0x12,0x9f,0x41,0x0d,0x0e,0x64}; //Interface ethernet address
 
-
+struct frame_flags cf_flag; //current frame flag
+struct frame_fields *frame_header;
+ssize_t d_size;
+uint32_t cur_cfs; //received cfs
+				  //
 int main(int argc, char *argv[]){
-	/*
-	char eth_addr[] = {x12,x9f,x41,x0d,x0e,x64}; //ethernet address
+	interface_receiver(frame_header, &cf_flag, &cur_cfs, &d_size, eth_addr);
+		return 0;
+}
+
+void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const char *mac_addr){
+
 	int fds[2];
 
 	uint8_t frame[1600];
@@ -31,46 +43,57 @@ int main(int argc, char *argv[]){
 
 
 	//read a single frame from switch
-    while((frame_len = receive_ethernet_frame(fds[0], frame)) > 0) {
-        data_as_hex = binary_to_hex(frame, frame_len);
-        printf("received frame, length %ld:\n", frame_len);
-        puts(data_as_hex);
-        free(data_as_hex);
-    }
+	while((frame_len = receive_ethernet_frame(fds[0], frame)) > 0) {
+		data_as_hex = binary_to_hex(frame, frame_len);
 
-    if(frame_len < 0) {
-        perror("read");
-        exit(1);
-    }
-	*/
 
-	uint8_t single_frame[] = {
-					0x12,0x9f,0x41,0x0d,0x0e,0x64 //destination address
-					0x12,0x9f,0x41,0x0d,0x0e,0x64 //source address
-					0x12,0x9f,                    //type
-					'P','a','y','l','o','a','d' //payload
-					};
+		//retrieve frame fields information
+		frame_f = (struct frame_fields *)data_as_hex;
+		handle_frame(data_as_hex, frame_len, frame_f,  curr_frame, data_size,  curr_check_sum, mac_addr);
 
-	struct frame_fields *frame = (struct frame_fields *)single_frame;
-	uint8_t *mac_ptr = frame->dest_addr;
-	for(int i=0; i<6; i++){
-		printf("%02x", mac_ptr[i]);
+		//verify checksum first
+		if(!curr_frame->check_sum_match){
+			printf("ignoring %d-byte frame", (int)frame_len);
+			printf("(bad fcs: got 0x%08x, expected 0x%08x,)\n", curr_frame->rcv_check_sum, *curr_check_sum);
+		}else if(!curr_frame->valid_length){
+			printf("ignoring %d-byte frame (short)\n", (int)frame_len);
+		}else if(curr_frame->is_broadcast){
+			printf("received %d-byte broadcast frame from %s\n",(int)frame_len, frame_f->src_addr);
+		}else if(curr_frame->is_for_me){
+			printf("received %d-byte broadcast frame from %s\n", (int)frame_len, frame_f->src_addr);
+		}
+
+		free(data_as_hex);
 	}
-	printf("\n");
-	return 0;
+	
+	if(frame_len < 0) {
+		perror("read");
+		exit(1);
+		}
 }
 
+void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, struct frame_flags *curr_frame, ssize_t *data_size, uint32_t *curr_check_sum, const char *mac_addr){
 
-/*
-void handle_frame(char *data_as_hex){
-	//process frame
-	struct frame_fields *s1 = (struct frame_fields *)data_as_hex;
-	for(int i=0; i<48; i++){
-		printf("%c", frame_fields->dest_addr);
+	//partition frame fields
+	*data_size = len - 14 - 4; //record datasize
+	*curr_check_sum = *(uint32_t *) ((uint8_t *) data_as_hex + len - 4);
+
+
+	if(memcmp(frame_f->dest_addr,"\xff\xff\xff\xff\xff\xff", 6) == 0){
+		curr_frame->is_broadcast = 1;
+	}else{
+		curr_frame->is_broadcast = 0;
 	}
-	printf("\n");
-	//split frame into fields based on bytes order
-	//retrieve ether net address from ether field
+	if(memcmp(frame_f->dest_addr, (uint8_t *)mac_addr , 6) == 0){
+		curr_frame->is_for_me = 1;
+	}else{
+		curr_frame->is_for_me = 0;
+	}
+
+	//compute checksum
+	uint32_t crc = crc32(0, data_as_hex, len-4);	
+	curr_frame->rcv_check_sum = crc;
+	curr_frame->check_sum_match = (*curr_check_sum == crc) ? 1 : 0;
+	curr_frame->valid_length = (len < 64) ? 0 : 1;
 }
-*/
 
