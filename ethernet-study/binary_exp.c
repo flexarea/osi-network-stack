@@ -19,9 +19,17 @@ ssize_t simulation(ssize_t n){
 
 
 	ssize_t** table = (ssize_t**) malloc(n*sizeof(ssize_t));
+	if (table == NULL){
+		perror("table failed to malloc");
+		return 0;
+	}
 	//allocate memory for each rows
 	for(int i=0; i<n; i++){
 		table[i] = (ssize_t*) malloc(capacity*sizeof(ssize_t));
+		if (table[i] == NULL){
+			perror("table failed to malloc");
+			return 0;
+		}
 	}
 
 	//populate array with slot 0 attempt
@@ -65,7 +73,17 @@ ssize_t simulation(ssize_t n){
 			//increase buffer size
 			if(t >= capacity){
 				capacity *= 2;
-				table[i][t] = (ssize_t*) realloc(capacity * sizeof(ssize_t))
+				ssize_t *ptr = (ssize_t*) realloc(capacity * sizeof(ssize_t))
+				if(ptr == NULL){
+					perror("realloc faild");
+					for(int i=0; i<n; i++){
+						free(table[i]);
+					}
+					free(table);
+					return 0;
+				}
+
+				table[i] = ptr;
 			}
 		}
 		t++; //move to next timeslot
