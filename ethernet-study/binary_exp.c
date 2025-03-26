@@ -14,7 +14,7 @@ int main(int argc, char *argv[]){
 	char *endptr; 
 	errno = 0;
 
-	long n = strtol(argv[1], endptr, 10);
+	long n = strtol(argv[1], &endptr, 10);
 
 	if(errno != 0 || *endptr != '\0' || n<=0){
 		fprintf(stderr, "invalid number\n");
@@ -37,11 +37,6 @@ ssize_t simulation(ssize_t n){
 	ssize_t curr_max = 1;
 	ssize_t number_completed = 0;
 	
-	//populate max range for each devices
-	for(ssize_t i=0; i<n; i++){
-		backoff_range_arr[i] = curr_max;
-	}
-
 	struct device_config *devices = (struct device_config*) malloc(n*sizeof(struct device_config));
 	if (devices == NULL){
 		perror("table failed to malloc");
@@ -64,7 +59,7 @@ ssize_t simulation(ssize_t n){
 		ssize_t number_col_devices = 0; //number of devices that collided
 
 
-		int col_detection = col_det(table, devices_w_collision, t, n, &number_collided_devices); //check for collision & record collided devices
+		int col_detection = col_det(devices, devices_w_collision, t, n, &number_col_devices); //check for collision & record collided devices
 
 		for(ssize_t i=0; i<n; i++){
 			if(devices[i].completed) continue;
@@ -93,7 +88,7 @@ ssize_t simulation(ssize_t n){
 		t++; //move to next timeslot
 	}
 
-	free(devices[i]);
+	free(devices);
 
 	return t;
 	//ends here
@@ -111,11 +106,11 @@ ssize_t rand_generator(ssize_t min, ssize_t max){
 }
 
 //collision detection
-ssize_t col_det(ssize_t *devices_, ssize_t *devices_w_collision_, ssize_t t_, ssize_t n_, ssize_t *number_collision_){
+ssize_t col_det(struct *device_config *devices_, ssize_t *devices_w_collision_, ssize_t t_, ssize_t n_, ssize_t *number_collision_){
 	ssize_t k=0;
 	ssize_t is_collision = 0;
 	for(ssize_t i=0; i<n_; i++){
-		for(ssize_t j=i; j<n; j++){
+		for(ssize_t j=i; j<n_; j++){
 			if(j == i || devices_[i].completed) continue;
 
 			//if device has same slot with 1 other device then append it to array of collided device and move to next
