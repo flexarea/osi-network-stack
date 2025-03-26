@@ -5,7 +5,12 @@
 #include "binary_exp.h"
 
 int main(int argc, char *argv[]){
-	return 0;
+	ssize_t start_simulation = simulation((ssize_t)argv[0]);
+	if (start_simulation == 0){
+		perror("an error occured");
+	}
+
+	return (int)start_simulation;
 }
 
 ssize_t simulation(ssize_t n){
