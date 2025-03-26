@@ -71,7 +71,10 @@ ssize_t simulation(ssize_t n){
 		t++; //move to next timeslot
 	}
 
-
+	for(int i=0; i<n; i++){
+		free(table[i]);
+	}
+	free(table);
 	return t;
 	//ends here
 }
