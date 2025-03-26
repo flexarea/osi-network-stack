@@ -3,15 +3,33 @@
 #include <sys/random.h>
 #include <stdlib.h>
 #include "binary_exp.h"
+#include <errno.h>
+#include <math.h>
 
 
 int main(int argc, char *argv[]){
-	ssize_t start_simulation = simulation((ssize_t)argv[1]);
-	if (start_simulation == 0){
-		perror("an error occured");
+	if(argc != 2){
+		fprintf(stderr, "invalid number of arguments\n");
+	}
+	char *endptr; 
+	errno = 0;
+
+	long n = strtol(argv[1], endptr, 10);
+
+	if(errno != 0 || *endptr != '\0' || n<=0){
+		fprintf(stderr, "invalid number\n");
+		return 1;
 	}
 
-	return (int)start_simulation;
+	ssize_t result  = simulation(n);
+	if (result  == 0){
+		perror("an error occured");
+		return 1;
+	}
+
+	printf("%zd\n", result);
+
+	return 0;
 }
 
 ssize_t simulation(ssize_t n){
@@ -25,7 +43,7 @@ ssize_t simulation(ssize_t n){
 	}
 
 	struct device_config *devices = (struct device_config*) malloc(n*sizeof(struct device_config));
-	if (table == NULL){
+	if (devices == NULL){
 		perror("table failed to malloc");
 		return 0;
 	}
@@ -45,31 +63,29 @@ ssize_t simulation(ssize_t n){
 		ssize_t devices_w_collision[n]; //array of devices that collide (always >= n)
 		ssize_t number_col_devices = 0; //number of devices that collided
 
-		/*
-		 * TODO: remove if unnecessary
-		ssize_t pt = ((t-1) < 0) ? 0 : t-1; //previous tslot
-		*/
 
 		int col_detection = col_det(table, devices_w_collision, t, n, &number_collided_devices); //check for collision & record collided devices
 
 		for(ssize_t i=0; i<n; i++){
+			if(devices[i].completed) continue;
+
 			//check for collison
 			if(col_detection){
 
 				//check if device collided
 				//if there is collision then the non-collided device doesn't send at this time slot
 
-				if(device_col(col_dev, number_col_devices, i)){
-					ssize_t rand_n = rand_generator(0, table[i].max_range);
-					table[i].next_attempt = t + rand_n + 1; //record next attempt 
-					table[i].max_range = (2**curr_max) - 1;
+				if(device_col(devices_w_collision, number_col_devices, i)){
+					ssize_t rand_n = rand_generator(0, devices[i].max_range);
+					devices[i].next_attempt = t + rand_n + 1; //record next attempt 
+					devices[i].max_range = pow(2, curr_max) - 1;
 				}
 
 			}else{
 
 				//No collison. can send frame in this time slot
-				if(table[i].next_attempt == t && !table[i].completed){
-					table[i].completed = 1;	
+				if(devices[i].next_attempt == t){
+					devices[i].completed = 1;	
 					number_completed++;
 				}
 			}
@@ -77,9 +93,7 @@ ssize_t simulation(ssize_t n){
 		t++; //move to next timeslot
 	}
 
-	for(ssize_t i=0; i<n; i++){
-		free(table[i]);
-	}
+	free(devices[i]);
 
 	return t;
 	//ends here
@@ -87,7 +101,7 @@ ssize_t simulation(ssize_t n){
 ssize_t rand_generator(ssize_t min, ssize_t max){
 	 ssize_t buf;	
 
-	if(getrandom(buf, sizeof(buf), 0) == -1){
+	if(getrandom(&buf, sizeof(buf), 0) == -1){
 		perror("getrandom")
 			return 0;
 	}
@@ -97,16 +111,15 @@ ssize_t rand_generator(ssize_t min, ssize_t max){
 }
 
 //collision detection
-ssize_t col_det(ssize_t *table_, ssize_t *devices_w_collision_, ssize_t t_, ssize_t n_, ssize_t *number_collision_){
+ssize_t col_det(ssize_t *devices_, ssize_t *devices_w_collision_, ssize_t t_, ssize_t n_, ssize_t *number_collision_){
 	ssize_t k=0;
 	ssize_t is_collision = 0;
-	for(ssize_t i=0; i<n_, i++){
-		for(ssize_t j=0; j<n; j++){
-			if(j == i){
-				continue;
-			}
+	for(ssize_t i=0; i<n_; i++){
+		for(ssize_t j=i; j<n; j++){
+			if(j == i || devices_[i].completed) continue;
+
 			//if device has same slot with 1 other device then append it to array of collided device and move to next
-			if(table_[i].next_attempt == table[j].next_attempt && table[i].next_attempt == t){
+			if(devices_[i].next_attempt == devices_[j].next_attempt && devices_[i].next_attempt == t){
 				is_collision = 1;
 				devices_w_collision_[k] = i;
 				k++;
