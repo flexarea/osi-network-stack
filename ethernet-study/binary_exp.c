@@ -51,10 +51,8 @@ ssize_t simulation(ssize_t n){
 	}
 
 	//while loop somewhere here
-	while(1){
-		if(number_completed == n){
-			break;
-		}
+	while(number_completed < n){
+
 		ssize_t devices_w_collision[n]; //array of devices that collide (always >= n)
 		ssize_t number_col_devices = 0; //number of devices that collided
 
@@ -65,13 +63,19 @@ ssize_t simulation(ssize_t n){
 			if(devices[i].completed) continue;
 
 			//check for collison
+			if(devices[i].next_attempt == t){
 			if(col_detection){
 
 				//check if device collided
 				//if there is collision then the non-collided device doesn't send at this time slot
 
 				if(device_col(devices_w_collision, number_col_devices, i)){
-					ssize_t rand_n = rand_generator(0, devices[i].max_range);
+					ssize_t rand_n;
+					if (t == 0){
+						rand_n = rand_generator(0, devices[i].max_range);
+					}else{
+						rand_n = rand_generator(1, devices[i].max_range);
+					}
 					devices[i].next_attempt = t + rand_n + 1; //record next attempt 
 					//update range
 					devices[i].max_range = (1 << curr_max) - 1;
@@ -81,12 +85,15 @@ ssize_t simulation(ssize_t n){
 			}else{
 
 				//No collision. can send frame in this time slot
-				if(devices[i].next_attempt == t){
 					devices[i].completed = 1;	
 					number_completed++;
-				}
 			}
 		}
+			//printf("Device %zd: max_range=%zd, next_attempt=%zd\n", i, devices[i].max_range, devices[i].next_attempt);
+		}
+		
+		printf("Collided Devices: %zd\n", number_col_devices);
+		printf("Time: %zd, Completed: %zd/%zd\n", t, number_completed, n);
 		t++; //move to next timeslot
 	}
 
@@ -109,24 +116,26 @@ ssize_t rand_generator(ssize_t min, ssize_t max){
 
 //collision detection
 ssize_t col_det(struct device_config *devices_, ssize_t *devices_w_collision_, ssize_t t_, ssize_t n_, ssize_t *number_collision_){
-	ssize_t k=0;
-	ssize_t is_collision = 0;
+	ssize_t transmitting = 0;
+	//check for transmitting devices
 	for(ssize_t i=0; i<n_; i++){
-			if(devices_[i].completed) continue;
-		for(ssize_t j=i+1; j<n_; j++){
-			if(devices_[i].completed) continue;
-
-			//if device has same slot with 1 other device then append it to array of collided device and move to next
-			if(devices_[i].next_attempt == devices_[j].next_attempt && devices_[i].next_attempt == t_){
-				is_collision = 1;
-				devices_w_collision_[k] = i;
-				k++;
-				(*number_collision_)++;
-				break;
-			}
+		if(devices_[i].next_attempt == t_ && !devices_[i].completed){
+			transmitting++;
 		}
+
 	} 
-	return is_collision;
+
+	if (transmitting >= 2){
+		for(ssize_t i=0; i<n_; i++){
+			if(devices_[i].next_attempt == t_ && !devices_[i].completed){
+				devices_w_collision_[(*number_collision_)++] = i;
+			}
+			
+		}
+		return 1;
+	}
+
+	return 0;
 }
 //check if device collided
 ssize_t device_col(ssize_t *devices_w_collision_, ssize_t number_collision_, ssize_t device_id){
