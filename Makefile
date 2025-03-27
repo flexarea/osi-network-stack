@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -g
 
 #remember to add stack here
-all: hexread hexdump receiver sender stack
+all: hexread hexdump receiver sender stack ethernet-study/binary_exp
 
 hexread: hexread.o util.o
 	$(CC) $(CFLAGS) hexread.o util.o -o hexread
@@ -20,9 +20,12 @@ sender: sender.c cs431vde.c util.o
 	$(CC) $(CFLAGS) sender.c cs431vde.c crc32.c util.o -o sender
 receiver: receiver.c cs431vde.c util.o
 	$(CC) $(CFLAGS) receiver.c cs431vde.c util.o -o receiver
+ethernet-study/binary_exp: ethernet-study/binary_exp.c
+	$(CC) $(CFLAGS) ethernet-study/binary_exp.c -o binary_exp
 util.o: util.c util.h
 	$(CC) $(CFLAGS) -c util.c -o util.o
 
 .PHONY:clean
 clean:
 	rm -f *.o hexread hexdump receiver sender stack
+	rm -f ethernet-study/binary_exp

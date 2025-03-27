@@ -1,0 +1,14 @@
+gcc -Wall -g -c hexread.c -o hexread.o
+gcc -Wall -g -c util.c -o util.o
+gcc -Wall -g hexread.o util.o -o hexread
+gcc -Wall -g -c hexdump.c -o hexdump.o
+gcc -Wall -g hexdump.o util.o -o hexdump
+gcc -Wall -g receiver.c cs431vde.c util.o -o receiver
+gcc -Wall -g sender.c cs431vde.c crc32.c util.o -o sender
+gcc -Wall -g -c stack.c -o stack.o
+gcc -Wall -g stack.o util.o cs431vde.c crc32.c -o stack
+gcc -Wall -g ethernet-study/binary_exp.c -o binary_exp
+*** Error code 1
+
+Stop.
+make: stopped in /home/entuyenabo/cs432/cs431

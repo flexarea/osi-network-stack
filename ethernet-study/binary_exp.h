@@ -12,7 +12,7 @@ typedef struct device_config{
 
 ssize_t simulation(ssize_t n);
 ssize_t rand_generator(ssize_t min, ssize_t max);
-int col_det(ssize_t *table_, ssize_t *devices_w_collision, ssize_t t_, ssize_t n_, ssize_t *number_collision_);
-int device_col(ssize_t *devices_w_collision, ssize_t *number_collision_, ssize_t device_id);
+ssize_t col_det(struct device_config *devices, ssize_t *devices_w_collision, ssize_t t_, ssize_t n_, ssize_t *number_collision_);
+ssize_t device_col(ssize_t *devices_w_collision, ssize_t number_collision_, ssize_t device_id);
 
 #endif

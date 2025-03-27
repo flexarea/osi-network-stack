@@ -74,6 +74,7 @@ ssize_t simulation(ssize_t n){
 					ssize_t rand_n = rand_generator(0, devices[i].max_range);
 					devices[i].next_attempt = t + rand_n + 1; //record next attempt 
 					devices[i].max_range = pow(2, curr_max) - 1;
+					curr_max++;
 				}
 
 			}else{
@@ -97,7 +98,7 @@ ssize_t rand_generator(ssize_t min, ssize_t max){
 	 ssize_t buf;	
 
 	if(getrandom(&buf, sizeof(buf), 0) == -1){
-		perror("getrandom")
+		perror("getrandom");
 			return 0;
 	}
 
@@ -106,15 +107,16 @@ ssize_t rand_generator(ssize_t min, ssize_t max){
 }
 
 //collision detection
-ssize_t col_det(struct *device_config *devices_, ssize_t *devices_w_collision_, ssize_t t_, ssize_t n_, ssize_t *number_collision_){
+ssize_t col_det(struct device_config *devices_, ssize_t *devices_w_collision_, ssize_t t_, ssize_t n_, ssize_t *number_collision_){
 	ssize_t k=0;
 	ssize_t is_collision = 0;
 	for(ssize_t i=0; i<n_; i++){
-		for(ssize_t j=i; j<n_; j++){
-			if(j == i || devices_[i].completed) continue;
+			if(devices_[i].completed) continue;
+		for(ssize_t j=i+1; j<n_; j++){
+			if(devices_[i].completed) continue;
 
 			//if device has same slot with 1 other device then append it to array of collided device and move to next
-			if(devices_[i].next_attempt == devices_[j].next_attempt && devices_[i].next_attempt == t){
+			if(devices_[i].next_attempt == devices_[j].next_attempt && devices_[i].next_attempt == t_){
 				is_collision = 1;
 				devices_w_collision_[k] = i;
 				k++;
@@ -126,9 +128,9 @@ ssize_t col_det(struct *device_config *devices_, ssize_t *devices_w_collision_, 
 	return is_collision;
 }
 //check if device collided
-ssize_t device_col(ssize_t *devices_w_collision_, ssize_t *number_collision_, ssize_t device_id){
-	for(ssize_t i=0; i<number_collision_; i++){
-		if(devices_w_collision[i] == device_id){
+ssize_t device_col(ssize_t *devices_w_collision_, ssize_t number_collision_, ssize_t device_id){
+	for(ssize_t i=0; i< number_collision_; i++){
+		if(devices_w_collision_[i] == device_id){
 			return 1;
 		}
 	}
