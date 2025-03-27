@@ -73,13 +73,14 @@ ssize_t simulation(ssize_t n){
 				if(device_col(devices_w_collision, number_col_devices, i)){
 					ssize_t rand_n = rand_generator(0, devices[i].max_range);
 					devices[i].next_attempt = t + rand_n + 1; //record next attempt 
-					devices[i].max_range = pow(2, curr_max) - 1;
+					//update range
+					devices[i].max_range = (1 << curr_max) - 1;
 					curr_max++;
 				}
 
 			}else{
 
-				//No collison. can send frame in this time slot
+				//No collision. can send frame in this time slot
 				if(devices[i].next_attempt == t){
 					devices[i].completed = 1;	
 					number_completed++;
@@ -120,7 +121,7 @@ ssize_t col_det(struct device_config *devices_, ssize_t *devices_w_collision_, s
 				is_collision = 1;
 				devices_w_collision_[k] = i;
 				k++;
-				*number_collision_++;
+				(*number_collision_)++;
 				break;
 			}
 		}
