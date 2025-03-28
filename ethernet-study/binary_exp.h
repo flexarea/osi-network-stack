@@ -5,14 +5,15 @@
 #include <stdint.h>
 
 typedef struct device_config{
-	ssize_t max_range;	
-	ssize_t next_attempt;
-	ssize_t completed;
+	uint32_t max_range;	
+	uint32_t next_attempt;
+	uint32_t completed;
+	uint32_t curr_max;
 }device_config;
 
-ssize_t simulation(ssize_t n);
-ssize_t rand_generator(ssize_t min, ssize_t max);
-ssize_t col_det(struct device_config *devices, ssize_t *devices_w_collision, ssize_t t_, ssize_t n_, ssize_t *number_collision_);
-ssize_t device_col(ssize_t *devices_w_collision, ssize_t number_collision_, ssize_t device_id);
+uint32_t simulation(uint32_t n);
+uint32_t rand_generator(uint32_t min, uint32_t max);
+uint32_t col_det(struct device_config *devices, uint32_t *devices_w_collision, uint32_t t_, uint32_t n_, uint32_t *number_collision_);
+uint32_t device_col(uint32_t *devices_w_collision, uint32_t number_collision_, uint32_t device_id);
 
 #endif
