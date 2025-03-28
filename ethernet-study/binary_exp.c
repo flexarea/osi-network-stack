@@ -70,12 +70,14 @@ ssize_t simulation(ssize_t n){
 				//if there is collision then the non-collided device doesn't send at this time slot
 
 				if(device_col(devices_w_collision, number_col_devices, i)){
-					ssize_t rand_n;
+					ssize_t rand_n = rand_generator(0, devices[i].max_range);
+					/*
 					if (t == 0){
 						rand_n = rand_generator(0, devices[i].max_range);
 					}else{
 						rand_n = rand_generator(1, devices[i].max_range);
 					}
+					*/
 					devices[i].next_attempt = t + rand_n + 1; //record next attempt 
 					//update range
 					devices[i].max_range = (1 << curr_max) - 1;
