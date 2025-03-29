@@ -22,6 +22,8 @@ int main(int argc, char *argv[]){
 	ssize_t bytes_written;
 	char *stdin_buffer;
 	ssize_t bytes;
+	int eof = 0;
+	int is_terminal = isatty(0);
 
 
 	//handle no file provided
@@ -71,6 +73,7 @@ int main(int argc, char *argv[]){
 					}
 				}
 			} else if (bytes == 0){
+				eof = 1;
 				break;
 			} else if (errno == EINTR){
 				continue;
@@ -97,9 +100,13 @@ int main(int argc, char *argv[]){
 				free(binary_data);
 				return 1;
 			}
-			write(1, "\n", 1);
+			//write(1, "\n", 1);
 			free(binary_data);
 
+		}
+		// Only write newline if we reached EOF
+		if (eof && is_terminal) {
+			write(1, "\n", 1);
 		}
 		free(stdin_buffer);
 	}else{
@@ -122,7 +129,7 @@ int main(int argc, char *argv[]){
 
 		//new code start here
 		while(1){
-		bytes = read(fd, file_buffer, max);
+			bytes = read(fd, file_buffer, max);
 			if(bytes > 0){
 				//copy read bytes into byte-counter
 				ssize_t i = 0;
