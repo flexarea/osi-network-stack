@@ -52,14 +52,14 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		frame_f = (struct frame_fields *)frame;
 		handle_frame(data_as_hex, frame_len, frame_f,  curr_frame, data_size,  curr_check_sum, mac_addr, frame);
 
-		if(curr_frame->check_sum_match == 0){
-			printf("ignoring %d-byte frame", (int)frame_len);
-			printf("(bad fcs: got 0x%08x, expected 0x%08x)\n", curr_frame->rcv_check_sum, *curr_check_sum);
+		if(curr_frame->valid_length == 0){
+			printf("ignoring %d-byte frame (short)\n", (int)frame_len);
 			continue;
 		}
 
-		if(curr_frame->valid_length == 0){
-			printf("ignoring %d-byte frame (short)\n", (int)frame_len);
+		if(curr_frame->check_sum_match == 0){
+			printf("ignoring %d-byte frame", (int)frame_len);
+			printf("(bad fcs: got 0x%08x, expected 0x%08x)\n", curr_frame->rcv_check_sum, *curr_check_sum);
 			continue;
 		}
 
