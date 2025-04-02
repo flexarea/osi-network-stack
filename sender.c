@@ -25,11 +25,11 @@ main(int argc, char *argv[])
 		//0xff,0xff,0xff,0xff,0xff,0xff, //broadcasating
 		0x12,0x9f,0x41,0x0d,0x0e,0x64, //source address
 		0x12,0x9f,                    //type
-		'A','B','C','D','E','F','G','H',
-		'I','J','K','L','M','N','O','P',
-		'Q','R','S','T','U','V','W','X',
+		//'Y','Z','A','B','C','D','E','F',
+		//'Y','Z','A','B','C','D','E','F',
 		'Y','Z','A','B','C','D','E','F',
 		'G','H','I','J','K','L','M','N',
+		'Y','Z','A','B','C','D','E','F',
 		'O','P','Q','R','S','T','U','V',
 	};
 
@@ -48,10 +48,10 @@ main(int argc, char *argv[])
 
 	//memset(frame, '\xff', 64);
 	//compute cfs
-	uint32_t crc = crc32(0, frame, 62);	
-	uint8_t *cfs_ptr = (uint8_t *)frame + 62;
+	uint32_t crc = crc32(0, frame, 46);	//3rd param: dst_addr+src_addr+type+payload
+	uint8_t *cfs_ptr = (uint8_t *)frame + 46;
 	memcpy(cfs_ptr, &crc, 4);
-	frame_len = 66;
+	frame_len = 50;
 
 	printf("sending frame, length %ld\n", frame_len);
 	send_ethernet_frame(fds[1], frame, frame_len);
