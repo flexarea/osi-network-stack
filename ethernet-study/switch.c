@@ -67,10 +67,16 @@ float switch_simulation(uint32_t n, uint32_t max_t_slot){
 		for(int i=0; i<n; i++){
 			if(devices[i].transmitting){
 				//assign dst_port to device
-				uint32_t rand_dst_prt = rand_generator(0,n-1);
+				uint32_t rand_dst_prt;
+				do{
+					rand_dst_prt = rand_generator(0, n-1);
+				}while(rand_dst_prt == i);
+
+				/*
 				if(rand_dst_prt == i){
 					rand_dst_prt = (i+1) % n;
 				}
+				*/
 				devices[i].dst_port = rand_dst_prt;
 			}
 		}
@@ -91,6 +97,8 @@ float switch_simulation(uint32_t n, uint32_t max_t_slot){
 					//check if device collided
 					if(device_col(devices_w_collision, number_col_devices, i)){
 						failed_transmission++;
+					}else{
+						successful_transmission++;
 					}
 
 				} else {

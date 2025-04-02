@@ -58,18 +58,20 @@ From this observation, we can conclude that:
 # a. Switch
 
 I got the following output in percentage after I ran the swith program simulation 5 times with the input N=10, N=20, N=40 respectively:
-1st round: 28.5, 8.79, 0.83
-2nd round: 29.1, 9.04, 0.75
-3rd round: 28.05, 7.61, 0.72
-4th round: 27.98, 10.07, 1.11
-5th round: 28.46, 10.17, 1.1
+1st round: 61.77, 63.46, 61.25
+2nd round: 64.00 60.66, 60.71
+3rd round: 63.94, 62.4, 61.19
+4th round: 63.98, 61.07, 61.11
+5th round: 62.46, 63.17, 61.47
 
-If we take the average for each input value of N we get:
-N=10 -> (28.5+29.1+28.05+27.98+28.46)/5 = 28.42%
-N=20 -> (8.79+9.04+7.61+10.07+10.17)/5 = 9.14%
-N=40 -> (0.83+0.75+0.72+1.11+1.1)/5 = 0.9%
+If we take the average for each input value of N, we get:
 
-Conclusion: It seems like as N increases or more devices connected to the switch, the success rate decreases, likely due to more collisions.
+N=10 -> (61.77 + 64.00 + 63.94 + 63.98 + 62.46) / 5 = 63.23%
+N=20 -> (63.46 + 60.66 + 62.4 + 61.07 + 63.17) / 5 = 62.15%
+N=40 -> (61.25 + 60.71 + 61.19 + 61.11 + 61.47) / 5 = 61.15%
+
+Conclusion:
+From the results, we observe that as the number of connected devices (N) increases, the success rate slightly decreases. However, the decline is not drastic, suggesting that while more devices may cause additional collisions, the system maintains a relatively stable performance.
 
 # b. Hub
 
