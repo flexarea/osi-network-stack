@@ -52,7 +52,6 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		frame_f = (struct frame_fields *)frame;
 		handle_frame(data_as_hex, frame_len, frame_f,  curr_frame, data_size,  curr_check_sum, mac_addr, frame);
 
-		printf("Recorded payload size: %d\n", (int)*data_size);
 		if(curr_frame->valid_length == 0){
 			printf("ignoring %d-byte frame (short)\n", (int)frame_len);
 			continue;
@@ -99,7 +98,7 @@ void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, 
 
 	//partition frame fields
 	*data_size = len - 14 - 4; //record datasize
-	*curr_check_sum = ntohl(*(uint32_t *) ( or_frame + len - 4));
+	*curr_check_sum = *(uint32_t *) ( or_frame + len - 4);
 
 	if(memcmp(frame_f->dest_addr,"\xff\xff\xff\xff\xff\xff", 6) == 0){
 		curr_frame->is_broadcast = 1;
@@ -116,7 +115,7 @@ void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, 
 	//compute checksum
 	uint32_t crc = crc32(0, or_frame, len-4);	
 	curr_frame->rcv_check_sum = ntohl(crc);
-	curr_frame->check_sum_match = (*curr_check_sum == ntohl(crc)) ? 1 : 0;
+	curr_frame->check_sum_match = (*curr_check_sum == crc) ? 1 : 0;
 	curr_frame->valid_length = (*data_size < 46) ? 0 : 1;
 }
 
