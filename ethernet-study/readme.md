@@ -77,6 +77,8 @@ Conclusion:
 
 - The lower transmission success rate might also stem from the assumption that each device has a 50% chance of attempting to send a frame in any given time slot. This high probability significantly impacts performance. Since devices randomly select a destination port, the likelihood of multiple devices choosing the same port increases with the number of devices (N), leading to a higher chance of collisions and a reduced success rate.
 
+- We assume the switch operates over a full-duplex transmission medium, as our simulation does not check whether the destination device is transmitting. This assumption reduces the likelihood of collisions compared to a half-duplex system, where simultaneous transmission and reception are not possible, leading to a significantly lower transmission success rate.
+
 # b. Hub
 
 I got the following output in percentage after I ran the hub program simulation 5 times with the input N=10, N=20, N=40 respectively:
@@ -99,3 +101,4 @@ Conclusion:
 
 - Similar to the switch, the implementation of this simulation significantly affects the low transmission success rate, mostly due to the assumption that each device has a 50% chance of transmitting a frame in any given time slot. This high probability drastically reduces the success rate, especially in a hub-based setup where frames are broadcast to all devices. Since simultaneous transmissions from two or more devices lead to immediate collisions, the 50% transmission probability greatly increases the likelihood of collisions as the number of devices (N) grows, making it nearly impossible to avoid collisions at scale.
 
+- We assume a half-duplex transmission medium for the hub, as devices cannot transmit and receive simultaneously. This constraint allows collisions to occur when two or more devices attempt to send frames over the shared medium at the same time.
