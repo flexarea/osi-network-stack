@@ -19,36 +19,42 @@ typedef struct frame_flags{
 	uint32_t rcv_check_sum;
 }frame_flags;
 
+typedef struct router{
+	uint8_t interface_id;
+	uint8_t interface_mac;
+	uint8_t interface_ip;
+}router;
+
+//routing table row
 typedef struct table_r{
-	uint8_t dest[6];
+	uint8_t dest[4];
+	uint8_t gateway[4]
 	uint8_t genmask[6];
-	uint8_t flag[6];
+	uint8_t flag[4];
+	uint8_t Netif[3]
 	//add more below
 }table_r;
 
 typedef struct ip_header{
-	uint8_t version
-	uint8_t IHL;
+	uint8_t version_IHL; //version and IHL
 	uint8_t type_of_service;
 	uint16_t total_length;
 	uint16_t identification;
-	uint8_t flag;
-	uint16_t fragment_offset;
+	uint16_t flag_fragment_offset; //flag and fragment offset
 	uint8_t ttl;
 	uint8_t protocol;
 	uint16_t header_checksum;
 	uint8_t src_addr[4];
 	uint8_t dest_addr[4];
 	uint8_t dest_addr[4];
-	uint16_t Option;
-	uint16_t padding
 }ip_header;
 
 typedef struct arp{
-	uint8_t hardware_type;
-	uint8_t protocol_type;
+	uint16_t hardware_type;
+	uint16_t protocol_type;
 	uint8_t hardware_size;
 	uint8_t protocol_size;
+	uint16_t opcode; //1 for request
 	uint8_t sender_ip[4];
 	uint8_t sender_mac[6];
 	uint8_t target_ip[6];

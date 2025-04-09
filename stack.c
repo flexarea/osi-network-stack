@@ -10,6 +10,14 @@
 #include <arpa/inet.h>
 
 const uint8_t eth_addr[] = {0x12,0x9f,0x41,0x0d,0x0e,0x63}; //Interface ethernet address
+const uint8_t interface_ip[]={0x8c,0xe9,0x01,0x01};       //Interface IP address
+struct table_r routing_table; 
+
+/*interface routing table configuration*/
+routing_table.dest = {0x0a,0x03,0x00,0x00};
+routing_table.gateway = {0x0a,0x03,0x00,0x01};
+routing_table.genmask = {0xff,0xff,0x00,0x00};
+
 
 int eth_cmp(struct frame_fields *frame_f,  const uint8_t *mac_addr);
 
@@ -17,7 +25,7 @@ struct frame_flags cf_flag; //current frame flag
 struct frame_fields frame_header;
 ssize_t d_size;
 uint32_t cur_cfs; //received cfs
-				  //
+
 int main(int argc, char *argv[]){
 	interface_receiver(&frame_header, &cf_flag, &cur_cfs, &d_size, eth_addr);
 	return 0;
@@ -127,5 +135,40 @@ int eth_cmp(struct frame_fields *frame_f,  const uint8_t *mac_addr){
 	}	
 	return 1;
 }
+
+//function to extract and process ip header fields
+void handle_packet(ssize_t len, struct frame_fields *ether_header, uint8_t *or_frame){
+	//jump to beginning of ip header
+	uint8_t *fields_ptr = or_frame + 2;
+	//extract ip header fields
+	struct ip_header packet = (struct *ip_header) fields_ptr;
+	char ip_str[INET_ADDRSTRLEN];
+	char genmask_str[INET_ADDRSTRLEN];
+	struct in_addr ip_addr;
+	struct in_addr genmask_addr;
+
+	/* Test print ip addr from packet
+	 *
+	inet_ntop(AF_INET, packet->src_addr, INET_ADDRSTRLEN);	
+	printf("IP SRC Address: %s\n", ip_str);	
+	*/
+
+	/*routing table logic*/	
+
+	//convert dest ip to bin
+	if(inet_aton(ip_str, &ip_addr)){
+		 printf("Binary IP (network byte order): %u\n", ip_addr.s_addr);
+	}else{
+		printf("error converting ip to binary\n");
+	}
+	//convert genmask to bin
+	if(inet_aton(genmask_str, &genmask_addr)){
+		 printf("Binary IP (network byte order): %u\n", ip_addr.s_addr);
+	}else{
+		printf("error converting genmask to binary\n");
+	}
+	
+}
+
 
 
