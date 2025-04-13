@@ -14,10 +14,11 @@ const uint8_t interface_ip[]={0x8c,0xe9,0x01,0x01};       //Interface IP address
 struct table_r routing_table; 
 
 /*interface routing table configuration*/
-routing_table.dest = {0x0a,0x03,0x00,0x00};
-routing_table.gateway = {0x0a,0x03,0x00,0x01};
-routing_table.genmask = {0xff,0xff,0x00,0x00};
+memcpy(table.dest, "\x0a\x03\x00\x00",4);
+memcpy(table.gateway, "\x0a\x03\x00\x01",4);
+memcpy(table.genmask, "\xff\xff\x00\x00",4);
 
+#define TABLE_LENGTH 5
 
 int eth_cmp(struct frame_fields *frame_f,  const uint8_t *mac_addr);
 
@@ -82,16 +83,16 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 			continue;
 		}
 
-		   if(curr_frame->is_for_me){
-		   printf("received %d-byte frame for me from %02x %02x %02x %02x %02x %02x\n", (int)frame_len, 
-		   frame_f->src_addr[0],
-		   frame_f->src_addr[1],
-		   frame_f->src_addr[2],
-		   frame_f->src_addr[3],
-		   frame_f->src_addr[4],
-		   frame_f->src_addr[5]);
-		   continue;
-		   }
+		if(curr_frame->is_for_me){
+			printf("received %d-byte frame for me from %02x %02x %02x %02x %02x %02x\n", (int)frame_len, 
+					frame_f->src_addr[0],
+					frame_f->src_addr[1],
+					frame_f->src_addr[2],
+					frame_f->src_addr[3],
+					frame_f->src_addr[4],
+					frame_f->src_addr[5]);
+			continue;
+		}
 
 		free(data_as_hex);
 	}
@@ -137,37 +138,71 @@ int eth_cmp(struct frame_fields *frame_f,  const uint8_t *mac_addr){
 }
 
 //function to extract and process ip header fields
-void handle_packet(ssize_t len, struct frame_fields *ether_header, uint8_t *or_frame){
+void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct table_r routing_table_){
 	//jump to beginning of ip header
 	uint8_t *fields_ptr = or_frame + 2;
-	//extract ip header fields
-	struct ip_header packet = (struct *ip_header) fields_ptr;
+	//cast to ip struct (extract ip header fields)
+	struct ip_header *packet = (struct ip_header *) fields_ptr;
 	char ip_str[INET_ADDRSTRLEN];
-	char genmask_str[INET_ADDRSTRLEN];
-	struct in_addr ip_addr;
-	struct in_addr genmask_addr;
+	struct in_addr ip_addr, genmask_addr;
+	int subnet_list[TABLE_LENGTH];
+	int lg_pfx_idx = -1; //longest subnet prefix index
+	int lg_prefix = -1;
+
 
 	/* Test print ip addr from packet
 	 *
-	inet_ntop(AF_INET, packet->src_addr, INET_ADDRSTRLEN);	
-	printf("IP SRC Address: %s\n", ip_str);	
-	*/
+	 inet_ntop(AF_INET, packet->src_addr, ip_str, INET_ADDRSTRLEN);	
+	 printf("IP SRC Address: %s\n", ip_str);	
+	 */
 
 	/*routing table logic*/	
 
 	//convert dest ip to bin
+	inet_ntop(AF_INET, &(packet->dest_addr), ip_str, INET_ADDRSTRLEN);	
+
 	if(inet_aton(ip_str, &ip_addr)){
-		 printf("Binary IP (network byte order): %u\n", ip_addr.s_addr);
+		printf("Binary IP (network byte order): %u\n", ip_addr.s_addr);
 	}else{
 		printf("error converting ip to binary\n");
 	}
-	//convert genmask to bin
-	if(inet_aton(genmask_str, &genmask_addr)){
-		 printf("Binary IP (network byte order): %u\n", ip_addr.s_addr);
-	}else{
-		printf("error converting genmask to binary\n");
-	}
+
+	for(int i=0; i<TABLE_LENGTH; i++){
+		char genmask_str[INET_ADDRSTRLEN];
+		char dest_str[INET_ADDRSTRLEN];
+		struct in_addr dest_addr, result;
+		int curr_lg_prefix;
 	
+		//convert addresses to ip
+		inet_ntop(AF_INET, routing_table_[i].genmask, genmask_str, INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, routing_table_[i].dest, dest_str, INET_ADDRSTRLEN);
+		
+		
+		//convert to bin
+		inet_aton(genmask_str, &genmask_addr);
+		inet_aton(dest_str, &dest_addr);
+		//bitwise-and
+		result.s_addr = ip_addr.s_addr & genmask_addr;
+		//check matching dest addr
+		if(result.s_addr == dest.s_addr){
+			curr_lg_prefix = __builtin_popcount(ntohl(dest.s_addr));
+			if(curr_lg_prefix > lg_prefix){
+				lg_prefix = curr_lg_prefix;
+				lg_prefix = i;
+			}	
+		}
+	}
+
+	if(lg_pfx_idx != 1){
+		//forward logic
+	}else{
+		//ARP
+	}
+}
+
+
+struct frame_fields* encapsulation(struct table_r routing_table_, struct frame_fields *packet){
+	/*encapsulation logic*/
 }
 
 

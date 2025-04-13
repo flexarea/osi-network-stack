@@ -29,9 +29,10 @@ typedef struct router{
 typedef struct table_r{
 	uint8_t dest[4];
 	uint8_t gateway[4]
-	uint8_t genmask[6];
+	uint8_t genmask[4];
 	uint8_t flag[4];
-	uint8_t Netif[3]
+	uint8_t Netif[3];
+	uint8_t subnet_mask;
 	//add more below
 }table_r;
 

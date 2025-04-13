@@ -20,6 +20,7 @@ main(int argc, char *argv[])
 	//0xff,0xff,0xff,0xff,0xff,0xff //broadcasating
 	//0x12,0x9f,0x41,0x0d,0x0e,0x64, //destination address
 
+	/*
 	uint8_t frame[1600] = {
 		0x12,0x9f,0x41,0x0d,0x0e,0x63, //destination address
 		//0xff,0xff,0xff,0xff,0xff,0xff, //broadcasating
@@ -32,7 +33,25 @@ main(int argc, char *argv[])
 		'Y','Z','A','B','C','D','E','F',
 		'O','P','Q','R','S','T','U','V',
 	};
+	*/
 
+	//ip packet encapsulated in ethernet frame
+	uint8_t packet[1600] = {
+		0x12,0x9f,0x41,0x0d,0x0e,0x63, //destination address
+		0xff,0xff,0xff,0xff,0xff,0xff, //broadcasating
+		0x12,0x9f,0x41,0x0d,0x0e,0x64, //source address
+		0x08,0x00,                     //type (IP)
+																	 //--------------IP
+		0x45,                          //version and IHL
+		0x00,0x00,                     //type of service
+		0x00,0x00,                     //total length
+		0x00,0x00,                     //identification
+		0x00,0x00,                     //Flags and Fragment Offset
+		0x00,0x00,                     //TTL and Protocol (0x01 for ICMP)
+							                     //4 bytes Header Checksum here
+		0x00,0x00,0x00,0x00            //Source address
+		0x00,0x00,0x00,0x00            //Destination address
+	};
 
 	int connect_to_remote_switch = 0;
 	char *local_vde_cmd[] = { "vde_plug", NULL };
@@ -62,7 +81,8 @@ main(int argc, char *argv[])
 	 * typing their password (which is accepted by a child process) before
 	 * this process terminates, which would result in send frames not actually
 	 * arriving.  Therefore, we pause and let the user manually end this
-	 * process. */
+	 * process. 
+	 * */
 
 	printf("Press Control-C to terminate sender.\n");
 	pause();
