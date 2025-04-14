@@ -105,4 +105,23 @@ crc32(uint32_t crc, const void *buf, size_t size)
 
 	return crc ^ ~0U;
 }
+uint16_t ip_checksum( uint8_t *ip_header){	
+	uint32_t sum = 0;	
+
+	for(int i=0; i<20; i += 2){
+		//Combine pairs
+		uint16_t word = (ip_header[i] << 8) | ip_header[i+1];
+		sum += word;
+
+		// Handle overflow
+		if(sum > 0xFFFF){
+			sum = (sum & 0xFFFF) + (sum >> 16);
+		}
+	}
+
+	//one's complement
+	uint16_t checksum = ~sum & 0xFFFF;
+
+	return checksum;
+}
 

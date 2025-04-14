@@ -36,25 +36,31 @@ main(int argc, char *argv[])
 	*/
 
 	//ip packet encapsulated in ethernet frame
-	uint8_t packet[1600] = {
+	ssize_t frame[1600] = {
 		0x12,0x9f,0x41,0x0d,0x0e,0x63, //destination address
-		0xff,0xff,0xff,0xff,0xff,0xff, //broadcasating
+		//0xff,0xff,0xff,0xff,0xff,0xff, //broadcasating
 		0x12,0x9f,0x41,0x0d,0x0e,0x64, //source address
 		0x08,0x00,                     //type (IP)
-																	 //--------------IP
+									   //----------IP
 		0x45,                          //version and IHL
-		0x00,0x00,                     //type of service
-		0x00,0x00,                     //total length
-		0x00,0x00,                     //identification
+		0x00,                          //type of service
+		0x00,0x44,                     //total length
+		0x00,0x01,                     //identification
 		0x00,0x00,                     //Flags and Fragment Offset
-		0x00,0x00,                     //TTL and Protocol (0x01 for ICMP)
-							                     //4 bytes Header Checksum here
-		0x00,0x00,0x00,0x00            //Source address
-		0x00,0x00,0x00,0x00            //Destination address
+		0x40,0x00,                     //TTL and Protocol (0x01 for ICMP)
+		0x00,0x00,					   //4 bytes Header Checksum here
+		0x00,0x00,0x00,0x00,            //Source address
+		0x00,0x00,0x00,0x00,            //Destination address
+		'Y','Z','A','B','C','D','E','F',
+		'Y','Z','A','B','C','D','E','F',
+		'Y','Z','A','B','C','D','E','F',
+		'G','H','I','J','K','L','M','N',
+		'Y','Z','A','B','C','D','E','F',
+		'O','P','Q','R','S','T','U','V',
 	};
 
 	int connect_to_remote_switch = 0;
-	char *local_vde_cmd[] = { "vde_plug", NULL };
+	char *local_vde_cmd[] = { "vde_plug", "/tmp/net1.vde" };
 	char *remote_vde_cmd[] = { "ssh", "pjohnson@weathertop.cs.middlebury.edu",
 		"/home/pjohnson/cs431/bin/vde_plug",
 		NULL };
@@ -66,11 +72,19 @@ main(int argc, char *argv[])
 	}
 
 	//memset(frame, '\xff', 64);
+	
+	//compute ip checksum	
+	uint16_t ip_checksum_ = ip_checksum(frame+14);
+
+	frame[24] = (ip_checksum_ >> 8) & 0xFF;
+	frame[25] = ip_checksum_ & 0xFF;
+
 	//compute cfs
-	uint32_t crc = crc32(0, frame, 62);	//3rd param: dst_addr+src_addr+type+payload
-	uint8_t *cfs_ptr = (uint8_t *)frame + 62;
+	uint32_t crc = crc32(0, frame, 82);	//3rd param: dst_addr+src_addr+type+payload
+
+	uint8_t *cfs_ptr = (uint8_t *)frame + 82;
 	memcpy(cfs_ptr, &crc, 4);
-	frame_len = 66;
+	frame_len = 86;
 
 	printf("sending frame, length %ld\n", frame_len);
 	send_ethernet_frame(fds[1], frame, frame_len);

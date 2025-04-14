@@ -25,6 +25,14 @@ typedef struct router{
 	uint8_t interface_ip;
 }router;
 
+typedef struct interface{
+	/*
+	the quantity, IP addresses, MAC addresses, and network parameters for each simulated interface;
+	*/
+	uint8_t mac_addr[6];
+	uint8_t ip_addr[4];
+}
+
 //routing table row
 typedef struct table_r{
 	uint8_t dest[4];
