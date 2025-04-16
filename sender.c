@@ -36,7 +36,7 @@ main(int argc, char *argv[])
 	*/
 
 	//ip packet encapsulated in ethernet frame
-	ssize_t frame[1600] = {
+	uint8_t frame[1600] = {
 		0x12,0x9f,0x41,0x0d,0x0e,0x63, //destination address
 		//0xff,0xff,0xff,0xff,0xff,0xff, //broadcasating
 		0x12,0x9f,0x41,0x0d,0x0e,0x64, //source address
@@ -47,10 +47,10 @@ main(int argc, char *argv[])
 		0x00,0x44,                     //total length
 		0x00,0x01,                     //identification
 		0x00,0x00,                     //Flags and Fragment Offset
-		0x40,0x00,                     //TTL and Protocol (0x01 for ICMP)
+		0x01,0xFF,                     //TTL and Protocol (0x01 for ICMP)
 		0x00,0x00,					   //4 bytes Header Checksum here
-		0x00,0x00,0x00,0x00,            //Source address
-		0x00,0x00,0x00,0x00,            //Destination address
+		0x01,0x02,0x02,0x05,            //Source address
+		0x01,0x03,0x04,0x04,            //Destination address
 		'Y','Z','A','B','C','D','E','F',
 		'Y','Z','A','B','C','D','E','F',
 		'Y','Z','A','B','C','D','E','F',
@@ -60,10 +60,8 @@ main(int argc, char *argv[])
 	};
 
 	int connect_to_remote_switch = 0;
-	char *local_vde_cmd[] = { "vde_plug", "/tmp/net1.vde" };
-	char *remote_vde_cmd[] = { "ssh", "pjohnson@weathertop.cs.middlebury.edu",
-		"/home/pjohnson/cs431/bin/vde_plug",
-		NULL };
+	char *local_vde_cmd[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net1.vde", NULL};
+	char *remote_vde_cmd[] = { "ssh", "pjohnson@weathertop.cs.middlebury.edu","/home/pjohnson/cs431/bin/vde_plug",NULL };
 	char **vde_cmd = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd;
 
 	if(connect_to_vde_switch(fds, vde_cmd) < 0) {
@@ -74,7 +72,7 @@ main(int argc, char *argv[])
 	//memset(frame, '\xff', 64);
 	
 	//compute ip checksum	
-	uint16_t ip_checksum_ = ip_checksum(frame+14);
+	uint16_t ip_checksum_ = ip_checksum((uint8_t *)(frame+14));
 
 	frame[24] = (ip_checksum_ >> 8) & 0xFF;
 	frame[25] = ip_checksum_ & 0xFF;

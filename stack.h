@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+#include <arpa/inet.h>
 
 typedef struct frame_fields{
 	uint8_t dest_addr[6];
@@ -25,18 +26,19 @@ typedef struct router{
 	uint8_t interface_ip;
 }router;
 
+
 typedef struct interface{
 	/*
 	the quantity, IP addresses, MAC addresses, and network parameters for each simulated interface;
 	*/
 	uint8_t mac_addr[6];
 	uint8_t ip_addr[4];
-}
+}interface;
 
 //routing table row
 typedef struct table_r{
 	uint8_t dest[4];
-	uint8_t gateway[4]
+	uint8_t gateway[4];
 	uint8_t genmask[4];
 	uint8_t flag[4];
 	uint8_t Netif[3];
@@ -55,8 +57,13 @@ typedef struct ip_header{
 	uint16_t header_checksum;
 	uint8_t src_addr[4];
 	uint8_t dest_addr[4];
-	uint8_t dest_addr[4];
 }ip_header;
+
+typedef struct packet_info{
+	char src_ip_addr[INET_ADDRSTRLEN];
+	char  dest_ip_addr[INET_ADDRSTRLEN];
+	int valid_checksum;
+}packet_info;
 
 typedef struct arp{
 	uint16_t hardware_type;
@@ -76,10 +83,12 @@ typedef struct arp_cache{
 }arp_cache;
 
 typedef struct icmp{
-	uint8_t type;
-	uint8_t code;
+	int type;
+	int code;
 }icmp;
 
 void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, struct frame_flags *curr_frame, ssize_t *data_size, uint32_t *curr_check_sum, const uint8_t *mac_addr, uint8_t *or_frame);
-void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr);
+void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr, struct table_r *routing_table, struct arp_cache *arp_cache);
+void encapsulation(struct frame_fields *frame_, int arp_idx_, int lg_pfx_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp);
+void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct table_r *routing_table, struct arp_cache *arp_cache__);
 #endif
