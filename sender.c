@@ -44,7 +44,7 @@ main(int argc, char *argv[])
 									   //----------IP
 		0x45,                          //version and IHL
 		0x00,                          //type of service
-		0x00,0x04,                     //total length
+		0x00,0x44,                     //total length
 		0x00,0x01,                     //identification
 		0x00,0x00,                     //Flags and Fragment Offset
 		0x04,0xFF,                     //TTL and Protocol (0x01 for ICMP)

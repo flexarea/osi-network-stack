@@ -71,7 +71,7 @@ typedef struct arp{
 	uint16_t protocol_type;
 	uint8_t hardware_size;
 	uint8_t protocol_size;
-	uint16_t opcode; //1 for request
+	uint16_t opcode; //1 for request 2 for reply
 	uint8_t sender_ip[4];
 	uint8_t sender_mac[6];
 	uint8_t target_ip[6];
@@ -90,6 +90,6 @@ typedef struct icmp{
 
 void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, struct frame_flags *curr_frame, ssize_t *data_size, uint32_t *curr_check_sum, const uint8_t *mac_addr, uint8_t *or_frame);
 void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr, struct table_r *routing_table, struct arp_cache *arp_cache);
-void encapsulation(struct frame_fields *frame_, int arp_idx_, int lg_pfx_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp);
+void encapsulation(struct frame_fields *frame_, int arp_idx_, int lg_pfx_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp, uint16_t type_);
 void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct table_r *routing_table, struct arp_cache *arp_cache__);
 #endif

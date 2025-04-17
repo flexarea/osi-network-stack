@@ -305,12 +305,19 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 }
 
 
-void encapsulation(struct frame_fields *frame_, int arp_idx_, int lg_pfx_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp){
+void encapsulation(struct frame_fields *frame_, int arp_idx_, int lg_pfx_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp, uint16_t type_){
 	/*encapsulation logic*/
 	memcpy(frame_->src_addr, eth_addr, 6);
+
+	//ICMP
+	if(curr_icmp->type != 1){
+		
+	}
+	//ARP
+	if(type_ == 2054){
+		
+	}
 	memcpy(frame_->dest_addr, arp_cache_[arp_idx_].mac_addr, 6);
-
-
 
 	or_frame[22] = packet_->ttl;
 
