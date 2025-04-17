@@ -44,10 +44,10 @@ main(int argc, char *argv[])
 									   //----------IP
 		0x45,                          //version and IHL
 		0x00,                          //type of service
-		0x00,0x44,                     //total length
+		0x00,0x04,                     //total length
 		0x00,0x01,                     //identification
 		0x00,0x00,                     //Flags and Fragment Offset
-		0x01,0xFF,                     //TTL and Protocol (0x01 for ICMP)
+		0x04,0xFF,                     //TTL and Protocol (0x01 for ICMP)
 		0x00,0x00,					   //4 bytes Header Checksum here
 		0x01,0x02,0x02,0x05,            //Source address
 		0x01,0x03,0x04,0x04,            //Destination address
@@ -72,7 +72,7 @@ main(int argc, char *argv[])
 	//memset(frame, '\xff', 64);
 	
 	//compute ip checksum	
-	uint16_t ip_checksum_ = ip_checksum((uint8_t *)(frame+14));
+	uint16_t ip_checksum_ = ip_checksum(frame+14);
 
 	frame[24] = (ip_checksum_ >> 8) & 0xFF;
 	frame[25] = ip_checksum_ & 0xFF;
@@ -80,7 +80,7 @@ main(int argc, char *argv[])
 	//compute cfs
 	uint32_t crc = crc32(0, frame, 82);	//3rd param: dst_addr+src_addr+type+payload
 
-	uint8_t *cfs_ptr = (uint8_t *)frame + 82;
+	uint8_t *cfs_ptr = (uint8_t *)frame + 82; //+32 for good frame
 	memcpy(cfs_ptr, &crc, 4);
 	frame_len = 86;
 

@@ -63,6 +63,7 @@ typedef struct packet_info{
 	char src_ip_addr[INET_ADDRSTRLEN];
 	char  dest_ip_addr[INET_ADDRSTRLEN];
 	int valid_checksum;
+	int valid_length;
 }packet_info;
 
 typedef struct arp{

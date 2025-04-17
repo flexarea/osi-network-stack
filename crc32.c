@@ -105,6 +105,7 @@ crc32(uint32_t crc, const void *buf, size_t size)
 
 	return crc ^ ~0U;
 }
+/*
 uint16_t ip_checksum( uint8_t *ip_header){	
 	uint32_t sum = 0;	
 
@@ -124,4 +125,31 @@ uint16_t ip_checksum( uint8_t *ip_header){
 
 	return checksum;
 }
+*/
 
+uint16_t ip_checksum( uint8_t *addr){	
+         /* Compute Internet Checksum for "count" bytes
+            *         beginning at location "addr".
+            */
+       register long sum = 0;
+	   int count = 20;
+
+        while( count > 1 )  {
+           /*  This is the inner loop */
+               sum += (addr[0] << 8) | addr[1];
+			   addr += 2;
+               count -= 2;
+       }
+
+           /*  Add left-over byte, if any */
+       if( count > 0 ){
+               sum +=  *addr << 8;
+		}
+
+           /*  Fold 32-bit sum to 16 bits */
+       while (sum>>16){
+           sum = (sum & 0xffff) + (sum >> 16);
+    	}
+
+       return ~sum;
+}
