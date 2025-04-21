@@ -16,7 +16,7 @@ const int TABLE_LENGTH = 3;
 const int CACHE_LENGTH = 3;
 
 const uint8_t eth_addr[] = {0x12,0x9f,0x41,0x0d,0x0e,0x63}; //Interface ethernet address
-const uint8_t interface_ip[]={0x8c,0xe9,0x01,0x01};       //Interface IP address
+const uint8_t interface_ip[]={0x01,0x02,0x01,0x01};       //Interface IP address
 
 int eth_cmp(struct frame_fields *frame_f,  const uint8_t *mac_addr);
 
@@ -94,9 +94,9 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		frame_f = (struct frame_fields *)frame;
 		handle_frame(data_as_hex, frame_len, frame_f,  curr_frame, data_size,  curr_check_sum, mac_addr, frame);
 		//jump to beginning of ip header
-		uint8_t *fields_ptr = frame + 14;
+		uint8_t *ether_payload = frame + 14;
 		//cast to ip struct (extract ip header fields)
-		struct ip_header *ip_packet = (struct ip_header *) fields_ptr;
+		struct ip_header *ip_packet = (struct ip_header *) ether_payload;
 		struct icmp curr_packet_icmp;
 		curr_packet_icmp.type = 1;
 		struct packet_info ip_packet_info;
@@ -114,6 +114,10 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		}
 
 		if(curr_frame->is_broadcast){
+			if(ntohs(frame_f->type) == 2054){
+				handle_arp(frame_f,frame, switch1_fds, frame_len, &ip_packet_info);
+				continue;
+			}
 			printf("received %d-byte broadcast frame from %02x %02x %02x %02x %02x %02x\n", (int)frame_len, 
 					frame_f->src_addr[0],
 					frame_f->src_addr[1],
@@ -280,7 +284,6 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	char *real_path;
 
 
-
 	if(lg_pfx_idx != -1){
 		if (memcmp(routing_table[lg_pfx_idx].gateway, "\x00\x00\x00\x00", 4) == 0 ){
 			real_path = (char *)packet->dest_addr;
@@ -311,6 +314,44 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 
 }
 
+void handle_arp(struct frame_fields *frame_, uint8_t *or_frame, int *switch_, ssize_t len, struct packet_info *packet_inf){
+	struct arp *arp_ptr = (struct arp *) (or_frame + 14);
+	//convert src address to ip str
+	inet_ntop(AF_INET, &(arp_ptr->sender_ip), packet_inf->src_ip_addr, INET_ADDRSTRLEN);	
+	inet_ntop(AF_INET, &(arp_ptr->target_ip), packet_inf->dest_ip_addr, INET_ADDRSTRLEN);	
+	printf("destination ip: %s\n", packet_inf->dest_ip_addr);
+	if(ntohs(arp_ptr->opcode) == 1){
+		if(!memcmp(interface_ip, arp_ptr->target_ip, 4) == 0){
+			printf("ignoring ARP from (not for me) %s\n", packet_inf->src_ip_addr);
+			return;
+		}
+		//update dest/src addr in ethernet header
+		memcpy(frame_->dest_addr, frame_->src_addr, 6);
+		memcpy(frame_->src_addr, eth_addr, 6);
+		//update target field
+		memcpy(arp_ptr->target_mac, frame_->dest_addr, 6);
+		memcpy(arp_ptr->target_ip, arp_ptr->sender_ip, 4);
+		//update sender field
+		memcpy(arp_ptr->sender_ip, interface_ip, 4);
+		memcpy(arp_ptr->sender_mac, eth_addr, 4);
+		//set opcode to reply
+		arp_ptr->opcode = 2;
+		
+		//compute checksum
+		uint32_t crc = crc32(0, or_frame, len-4);	
+		memcpy(or_frame+(len-4), &crc ,4);
+		//send arp reply
+		printf("about to send arp reply\n");
+		send_ethernet_frame(switch_[1], or_frame, len);
+		printf("sent arp reply to %s\n", packet_inf->src_ip_addr);
+		return;
+	}
+	printf("dropping ARP packet from %s\n", packet_inf->src_ip_addr);
+}
+
+void handle_icmp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct table_r *routing_table, struct arp_cache *arp_cache__){
+	//handle ICMP here
+}
 
 void encapsulation(struct frame_fields *frame_, int arp_idx_, int lg_pfx_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp, uint16_t type_){
 	/*encapsulation logic*/
