@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
 	memcpy(interface_routing_table[0].dest, "\x01\x02\x00\x00",4);
 	memcpy(interface_routing_table[0].gateway, "\x00\x00\x00\x00",4); //subnework 1 (1.2/16)
 	memcpy(interface_routing_table[0].genmask, "\xff\xff\x00\x00",4);
-	memcpy(interface_routing_table[1].dest, "\x01\x01\x00\x00",4);
+	memcpy(interface_routing_table[1].dest, "\x01\x03\x00\x00",4);
 	memcpy(interface_routing_table[1].gateway, "\x00\x00\x00\x00",4); //subnetwork 2 (1.3/16)
 	memcpy(interface_routing_table[1].genmask, "\xff\xff\x00\x00",4);
 	memcpy(interface_routing_table[2].dest, "\x01\x04\x00\x00",4);
@@ -59,11 +59,11 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 	ssize_t frame_len;
 	int connect_to_remote_switch = 0;
 	char *local_vde_cmd[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net1.vde", NULL};
-	//char *local_vde_cmd2[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net2.vde", NULL};
+	char *local_vde_cmd2[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net2.vde", NULL};
 	char *remote_vde_cmd[] = {"ssh", "entuyenabo@weathertop.cs.middlebury.edu", "/home/entuyenabo/cs431/bin/vde_plug", NULL};
 
 	char **vde_cmd = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd;
-	//char **vde_cmd2 = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd2;
+	char **vde_cmd2 = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd2;
 
 	//connect to switch1
 	if(connect_to_vde_switch(switch1_fds, vde_cmd) < 0){
@@ -71,11 +71,10 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		exit(1);
 	}
 	//connect to switch2
-	/*
 	   if(connect_to_vde_switch(switch2_fds, vde_cmd2) < 0){
 	   printf("Could not connect to switch, exiting.\n");
 	   exit(1);
-	   }*/
+	   }
 
 
 	//read a single frame from switch
@@ -276,7 +275,7 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 
 	if(lg_pfx_idx != -1){
 		if (memcmp(routing_table[lg_pfx_idx].gateway, "\x00\x00\x00\x00", 4) == 0 ){
-			real_path = packet_inf->dest_ip_addr;
+			real_path = packet->dest_addr;
 		}else{
 			real_path = (char *)routing_table[lg_pfx_idx].gateway;
 		}
