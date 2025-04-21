@@ -53,6 +53,7 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 
 	int switch1_fds[2];
 	int switch2_fds[2];
+	int switch3_fds[2];
 	char *data_as_hex;
 
 	uint8_t frame[1600];
@@ -60,10 +61,12 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 	int connect_to_remote_switch = 0;
 	char *local_vde_cmd[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net1.vde", NULL};
 	char *local_vde_cmd2[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net2.vde", NULL};
+	char *local_vde_cmd3[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net3.vde", NULL};
 	char *remote_vde_cmd[] = {"ssh", "entuyenabo@weathertop.cs.middlebury.edu", "/home/entuyenabo/cs431/bin/vde_plug", NULL};
 
 	char **vde_cmd = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd;
 	char **vde_cmd2 = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd2;
+	char **vde_cmd3 = connect_to_remote_switch ? remote_vde_cmd : local_vde_cmd3;
 
 	//connect to switch1
 	if(connect_to_vde_switch(switch1_fds, vde_cmd) < 0){
@@ -76,8 +79,13 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 	   exit(1);
 	   }
 
+	//connect to switch3
+	   if(connect_to_vde_switch(switch3_fds, vde_cmd3) < 0){
+	   printf("Could not connect to switch, exiting.\n");
+	   exit(1);
+	   }
 
-	//read a single frame from switch
+	//read a single frame from switch1
 	while((frame_len = receive_ethernet_frame(switch1_fds[0], frame)) > 0) {
 		data_as_hex = binary_to_hex(frame, frame_len);
 
