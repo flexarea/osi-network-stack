@@ -283,7 +283,7 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 
 	if(lg_pfx_idx != -1){
 		if (memcmp(routing_table[lg_pfx_idx].gateway, "\x00\x00\x00\x00", 4) == 0 ){
-			real_path = packet->dest_addr;
+			real_path = (char *)packet->dest_addr;
 		}else{
 			real_path = (char *)routing_table[lg_pfx_idx].gateway;
 		}
