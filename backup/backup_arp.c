@@ -333,9 +333,9 @@ void handle_arp(struct frame_fields *frame_, uint8_t *or_frame, int *switch_, ss
 		memcpy(arp_ptr->target_ip, arp_ptr->sender_ip, 4);
 		//update sender field
 		memcpy(arp_ptr->sender_ip, interface_ip, 4);
-		memcpy(arp_ptr->sender_mac, eth_addr, 4);
+		memcpy(arp_ptr->sender_mac, eth_addr, 6);
 		//set opcode to reply
-		arp_ptr->opcode = 2;
+		arp_ptr->opcode = htons(2);
 		
 		//compute checksum
 		uint32_t crc = crc32(0, or_frame, len-4);	

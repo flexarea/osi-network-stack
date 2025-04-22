@@ -326,6 +326,7 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 		}
 	}else{
 		//network unreacheable
+		//send ICMP reply here
 		curr_icmp->type = 3;
 		curr_icmp->code = 0;
 	}

@@ -22,28 +22,30 @@ main(int argc, char *argv[])
 	char *data_as_hex;
 
 	// ARP request encapsulated in ethernet frame (60 bytes)
+
 	uint8_t frame[1600] = {
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Destination (broadcast)
-		0x12, 0x9f, 0x41, 0x0d, 0x0e, 0x64, // Source MAC
-		0x08, 0x06,                         // Type (ARP = 0x0806)
+		0x12,0x9f,0x41,0x0d,0x0e,0x64, //destination address
+		//0xff,0xff,0xff,0xff,0xff,0xff, //broadcasating
+		0x12,0x9f,0x41,0x0d,0x0e,0x63, //source address
+		0x08,0x00,                     //type (IP)
+									   //----------IP
+		0x45,                          //version and IHL
+		0x00,                          //type of service
+		0x00,0x44,                     //total length
+		0x00,0x01,                     //identification
+		0x00,0x00,                     //Flags and Fragment Offset
+		0x40,0xFF,                     //TTL and Protocol (0x01 for ICMP)
+		0x00,0x00,					   //4 bytes Header Checksum here
+		0x01,0x01,0x02,0x05,            //Source address
+		0x01,0x02,0x01,0x02,            //Destination address
 
-		// ARP Packet (28 bytes)
-		0x00, 0x01,                         // Hardware type (Ethernet = 1)
-		0x08, 0x00,                         // Protocol type (IPv4 = 0x0800)
-		0x06,                               // Hardware address length (MAC = 6 bytes)
-		0x04,                               // Protocol address length (IPv4 = 4 bytes)
-		0x00, 0x01,                         // opcode (request = 1)
-		0x12, 0x9f, 0x41, 0x0d, 0x0e, 0x64, //Sender hardware address
-		0x01, 0x02, 0x02, 0x05,				//Sender protocol address
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //Target hardware
-		0x01, 0x02, 0x01, 0x01,            //Target protocol address
-
-		//padding here (18 bytes)
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-			//FCS
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	};
-
 
 	int connect_to_remote_switch = 0;
 	char *local_vde_cmd[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net1.vde", NULL};
@@ -64,11 +66,11 @@ main(int argc, char *argv[])
 	frame[25] = ip_checksum_ & 0xFF;
 
 	//compute cfs
-	uint32_t crc = crc32(0, frame, 60);	//3rd param: dst_addr+src_addr+type+payload
+	uint32_t crc = crc32(0, frame, 82);	//3rd param: dst_addr+src_addr+type+payload
 
-	uint8_t *cfs_ptr = (uint8_t *)frame + 60; //
+	uint8_t *cfs_ptr = (uint8_t *)frame + 82; //
 	memcpy(cfs_ptr, &crc, 4);
-	frame_len = 64;
+	frame_len = 86;
 
 	printf("sending frame, length %ld\n", frame_len);
 	send_ethernet_frame(fds[1], frame, frame_len);
@@ -83,7 +85,7 @@ main(int argc, char *argv[])
 	 * */
 
 	printf("Press Control-C to terminate sender.\n");
-	pause();
+	//pause();
 
 	while((rcv_frame_len = receive_ethernet_frame(fds[0], rcv_frame)) > 0) {
 		data_as_hex = binary_to_hex(rcv_frame, rcv_frame_len);
