@@ -37,7 +37,7 @@ main(int argc, char *argv[])
 		0x40,0xFF,                     //TTL and Protocol (0x01 for ICMP)
 		0x00,0x00,					   //4 bytes Header Checksum here
 		0x01,0x01,0x02,0x05,            //Source address
-		0x01,0x02,0x01,0x02,            //Destination address
+		0x01,0x05,0x01,0x02,            //Destination address
 
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -60,7 +60,7 @@ main(int argc, char *argv[])
 	//memset(frame, '\xff', 64);
 
 	//compute ip checksum	
-	uint16_t ip_checksum_ = ip_checksum(frame+14);
+	uint16_t ip_checksum_ = ip_checksum(frame+14, 20);
 
 	frame[24] = (ip_checksum_ >> 8) & 0xFF;
 	frame[25] = ip_checksum_ & 0xFF;

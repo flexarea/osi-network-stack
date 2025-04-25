@@ -127,12 +127,13 @@ uint16_t ip_checksum( uint8_t *ip_header){
 }
 */
 
-uint16_t ip_checksum( uint8_t *addr){	
+uint16_t ip_checksum( uint8_t *addr, int protocol_count){	
          /* Compute Internet Checksum for "count" bytes
             *         beginning at location "addr".
             */
+		int count;
+		count = protocol_count;
        register long sum = 0;
-	   int count = 20;
 
         while( count > 1 )  {
            /*  This is the inner loop */

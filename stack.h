@@ -91,7 +91,8 @@ typedef struct icmp{
 
 void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, struct frame_flags *curr_frame, ssize_t *data_size, uint32_t *curr_check_sum, const uint8_t *mac_addr, uint8_t *or_frame);
 void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_);
-void encapsulation(struct frame_fields *frame_, int arp_idx_, int lg_pfx_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp, struct interface *interface_list_);
-void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct table_r *routing_table, struct arp_cache *arp_cache__, struct interface *interface_list_);
+void encapsulation(struct frame_fields *frame_, int arp_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp, struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id);
+void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct table_r *routing_table, struct arp_cache *arp_cache__, struct interface *interface_list_, int receiver_id);
 void handle_arp(struct frame_fields *frame_, uint8_t *or_frame, ssize_t len, struct packet_info *packet_inf, struct interface *interface_list_);
+void handle_icmp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct interface *interface_list_, int transmitter_id);
 #endif
