@@ -129,19 +129,19 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 
 		if(curr_frame->valid_length == 0){
 			printf("ignoring %d-byte frame (short)\n", (int)frame_len);
-			continue;
+			goto skip;
 		}
 
 		if(curr_frame->check_sum_match == 0){
 			printf("ignoring %d-byte frame", (int)frame_len);
 			printf("(bad fcs: got 0x%08x, expected 0x%08x)\n", curr_frame->rcv_check_sum, *curr_check_sum);
-			continue;
+			goto skip;
 		}
 
 		if(curr_frame->is_broadcast){
 			if(ntohs(frame_f->type) == 2054){
 				handle_arp(frame_f,frame, frame_len, &ip_packet_info, interface_list_);
-				continue;
+				goto skip;
 			}
 			printf("received %d-byte broadcast frame from %02x %02x %02x %02x %02x %02x\n", (int)frame_len, 
 					frame_f->src_addr[0],
@@ -150,7 +150,7 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 					frame_f->src_addr[3],
 					frame_f->src_addr[4],
 					frame_f->src_addr[5]);
-			continue;
+			goto skip;
 		}
 
 		if(curr_frame->is_for_me){
@@ -169,18 +169,22 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 				if(!ip_packet_info.valid_length){ //actually change comparison here, it's wrong
 					printf("somewhere here\n");
 					printf("dropping packet from %s (wrong length)\n", ip_packet_info.src_ip_addr);
-					continue;
+					goto skip;
 				}
 
 				if(!ip_packet_info.valid_checksum){
 					printf("inside checksum check\n");
 					printf("dropping packet from %s (bad IP header checksum)\n", ip_packet_info.src_ip_addr);
-					continue;
+					goto skip;
 				}	
 			}
-			continue;
+			goto skip;
+		}else{
+			printf("ignoring %d-byte frame (not for me)\n", (int)frame_len);
+			goto skip;
 		}
 
+	skip:
 		free(data_as_hex);
 	}
 
