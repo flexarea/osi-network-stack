@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 
+#define NUMBER_INTERFACES 3
+
 typedef struct frame_fields{
 	uint8_t dest_addr[6];
 	uint8_t src_addr[6];
