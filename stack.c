@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <poll.h>
 
 const int TABLE_LENGTH = 3;
 const int CACHE_LENGTH = 3;
@@ -31,7 +32,7 @@ struct frame_flags cf_flag; //current frame flag
 struct frame_fields frame_header;
 ssize_t d_size;
 uint32_t cur_cfs; //received cfs
-
+ 
 int main(int argc, char *argv[]){
 
 	struct table_r *interface_routing_table = (struct table_r *) malloc(TABLE_LENGTH*sizeof(struct table_r));
@@ -79,8 +80,9 @@ int main(int argc, char *argv[]){
 
 void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_){
 
-	char *data_as_hex;
+	//struct pollfd *pfds; 
 
+	char *data_as_hex;
 	uint8_t frame[1600];
 	ssize_t frame_len;
 	int connect_to_remote_switch = 0;
@@ -109,7 +111,30 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		printf("Could not connect to switch, exiting.\n");
 		exit(1);
 	}
+	
+	/*polling implementation*/
+	/*
+	pfds = (struct pollfd *pfds) malloc(NUMBER_INTERFACES * sizeof(struct pollfd));
+	//assign POLLIN to each pollfd events
+	for(int i=0; i<NUMBER_INTERFACES; i++){
+		pfds[i].events = POLLIN;
+	}
 
+	while(1){
+		if(poll(pfds, NUMBER_INTERFACES, -1) == -1){
+			printf("poll");
+			exit(1);
+		}
+	
+		for(int i=0; i<NUMBER_INTERFACES; i++){
+			if(pfds[i].revents & POLLIN){
+
+				handle_interface(frame_f, curr_frame, curr_check_sum, data_size, *mac_addr, routing_table, arp_cache, interface_list_);
+			}
+		}
+	}
+	*/
+	
 	//read a single frame from switch1
 	while((frame_len = receive_ethernet_frame(interface_list_[0].switch_[0], frame)) > 0) {
 		data_as_hex = binary_to_hex(frame, frame_len);
@@ -240,7 +265,7 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	//int arp_idx; 
 	int error = 0;
 	int transmitter_idx = receiver_id;
-	uint8_t *dest_addr;
+	uint8_t *final_dest_addr;
 	int interface_idx; //id of interface to which potential packet is destined to
 
 	//convert dest address to ip str
@@ -272,9 +297,14 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 		return;
 	}
 
+	/*destination ip matches local interface*/
+	if(is_interface(interface_list_, packet->dest_addr) >= 0){
+			//dest_addr = interface_list_[interface_idx].mac_addr;
+			printf("digesting packet\n");
+			return;
+		}
 
 	if(!error){
-		if((interface_idx = is_interface(interface_list_, packet->dest_addr)) < 0){
 			for(int i=0; i<TABLE_LENGTH; i++){
 				char genmask_str[INET_ADDRSTRLEN]; 
 				char dest_str[INET_ADDRSTRLEN];
@@ -313,11 +343,11 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 				}
 				// arp lookup
 				int found_mac = 0;
-				//check if destination ip is for local interfaces
+
 				for(int i=0; i<CACHE_LENGTH; i++){
 					if(memcmp(arp_cache__[i].ip_addr, real_path, 4) == 0){
 						//arp_idx = i;
-						dest_addr = arp_cache__[i].mac_addr;
+						final_dest_addr = arp_cache__[i].mac_addr;
 						found_mac = 1;
 					}	
 				}
@@ -337,15 +367,10 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 			}
 			//decrease ttl;
 			if(!error) packet->ttl--;
-		}else{
-			dest_addr = interface_list_[interface_idx].mac_addr;
-			printf("digesting packet\n");
-			return;
-		}
 	}
 
 	//encapsulation here
-	encapsulation(frame_f, packet, len, or_frame, dest_addr, curr_icmp, interface_list_, error, packet_inf, transmitter_idx);
+	encapsulation(frame_f, packet, len, or_frame, final_dest_addr, curr_icmp, interface_list_, error, packet_inf, transmitter_idx);
 	send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, len);
 	printf("forwading packet to %s\n", packet_inf->dest_ip_addr);
 }
@@ -382,7 +407,7 @@ void handle_arp(struct frame_fields *frame_, uint8_t *or_frame, ssize_t len, str
 		memcpy(arp_ptr->target_ip, arp_ptr->sender_ip, 4);
 		//update sender field
 		memcpy(arp_ptr->sender_ip, interface_list_[idx].ip_addr, 4);
-		memcpy(arp_ptr->sender_mac, interface_list_[idx].mac_addr, 4);
+		memcpy(arp_ptr->sender_mac, interface_list_[idx].mac_addr, 6);
 		//set opcode to reply
 		arp_ptr->opcode = 2;
 
@@ -492,6 +517,7 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 int is_interface(struct interface *interface_list, uint8_t *ip_addr){
 	for(int i=0; i<NUMBER_INTERFACES; i++){
 		if(memcmp(interface_list[i].ip_addr, ip_addr, 4) == 0){
+			printf("found match in is_interface\n");
 			return i;
 		}
 	}
