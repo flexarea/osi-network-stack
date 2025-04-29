@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
 	memcpy(interface_routing_table[1].gateway, "\x00\x00\x00\x00",4); //subnetwork 2 (1.3/16)
 	memcpy(interface_routing_table[1].genmask, "\xff\xff\x00\x00",4);
 	memcpy(interface_routing_table[2].dest, "\x01\x04\x00\x00",4);
-	memcpy(interface_routing_table[2].gateway, "\x00\x00\x00\x00",4); //subnetwork 3 (1.4/16) (inactive interface)
+	memcpy(interface_routing_table[2].gateway, "\x00\x00\x00\x00",4); //subnetwork 3 (1.4/16)
 	memcpy(interface_routing_table[2].genmask, "\xff\xff\x00\x00",4);
 	/*assign ids to interfaces in routing table*/
 	interface_routing_table[0].interface_id = 0;
@@ -53,9 +53,9 @@ int main(int argc, char *argv[]){
 
 	/*ARP cache configuration*/
 	memcpy(interface_arp_cache[0].ip_addr, "\x01\x02\x01\x02",4);
-	memcpy(interface_arp_cache[0].mac_addr, "\x12\x9f\x41\x0d\x0e\x67",6); //send to gateway (next hop)
+	memcpy(interface_arp_cache[0].mac_addr, "\x12\x9f\x41\x0d\x0e\x67",6); //send to host (next hop)
 	memcpy(interface_arp_cache[1].ip_addr, "\x01\x03\x01\x02",4);
-	memcpy(interface_arp_cache[1].mac_addr, "\x12\x9f\x41\x0d\x0e\x68",6); //send to gateway (next hop)
+	memcpy(interface_arp_cache[1].mac_addr, "\x12\x9f\x41\x0d\x0e\x68",6); //send to host (next hop)
 
 	/*Interface configuration*/
 	struct interface *interface_list = (struct interface *) malloc(NUMBER_INTERFACES * sizeof(struct interface));
@@ -184,7 +184,7 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 			goto skip;
 		}
 
-	skip:
+skip:
 		free(data_as_hex);
 	}
 
@@ -237,9 +237,11 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	struct in_addr ip_addr;
 	int lg_pfx_idx = -1; //longest subnet prefix index
 	int lg_prefix = -1;
-	int arp_idx; 
+	//int arp_idx; 
 	int error = 0;
 	int transmitter_idx = receiver_id;
+	uint8_t *dest_addr;
+	int interface_idx; //id of interface to which potential packet is destined to
 
 	//convert dest address to ip str
 	inet_ntop(AF_INET, &(packet->dest_addr), packet_inf->dest_ip_addr, INET_ADDRSTRLEN);	
@@ -257,80 +259,93 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	if(!packet_inf->valid_length) return;
 
 
-	if(packet->ttl <= 1){
+	if(packet->ttl == 1){
 		curr_icmp->type = 11;
 		curr_icmp->code = 0;
 		error = 1;
 		//return;
+	}else if(packet->ttl < 1){
+		curr_icmp->type = 11;
+		curr_icmp->code = 0;
+		error = 1;
+		printf("dropping packet from %s to %s (TTL exceeded)\n", packet_inf->src_ip_addr, packet_inf->dest_ip_addr);
+		return;
 	}
-
 
 
 	if(!error){
-		for(int i=0; i<TABLE_LENGTH; i++){
-			char genmask_str[INET_ADDRSTRLEN]; 
-			char dest_str[INET_ADDRSTRLEN];
-			struct in_addr dest_addr, genmask_addr, result;
-			int curr_lg_prefix;
+		if((interface_idx = is_interface(interface_list_, packet->dest_addr)) < 0){
+			for(int i=0; i<TABLE_LENGTH; i++){
+				char genmask_str[INET_ADDRSTRLEN]; 
+				char dest_str[INET_ADDRSTRLEN];
+				struct in_addr dest_addr, genmask_addr, result;
+				int curr_lg_prefix;
 
-			//convert addresses to ip
-			inet_ntop(AF_INET, routing_table[i].genmask, genmask_str, INET_ADDRSTRLEN);
-			inet_ntop(AF_INET, routing_table[i].dest, dest_str, INET_ADDRSTRLEN);
+				//convert addresses to ip
+				inet_ntop(AF_INET, routing_table[i].genmask, genmask_str, INET_ADDRSTRLEN);
+				inet_ntop(AF_INET, routing_table[i].dest, dest_str, INET_ADDRSTRLEN);
 
-			//convert to bin
-			inet_aton(genmask_str, &genmask_addr);
-			inet_aton(dest_str, &dest_addr);
-			//bitwise-and
-			result.s_addr = ip_addr.s_addr & genmask_addr.s_addr;
+				//convert to bin
+				inet_aton(genmask_str, &genmask_addr);
+				inet_aton(dest_str, &dest_addr);
+				//bitwise-and
+				result.s_addr = ip_addr.s_addr & genmask_addr.s_addr;
 
-			//check matching dest addr
-			if(result.s_addr == dest_addr.s_addr){
-				curr_lg_prefix = __builtin_popcount(ntohl(genmask_addr.s_addr));
-				if(curr_lg_prefix > lg_prefix){
-					lg_prefix = curr_lg_prefix;
-					lg_pfx_idx = i;
-				}	
+				//check matching dest addr
+				if(result.s_addr == dest_addr.s_addr){
+					curr_lg_prefix = __builtin_popcount(ntohl(genmask_addr.s_addr));
+					if(curr_lg_prefix > lg_prefix){
+						lg_prefix = curr_lg_prefix;
+						lg_pfx_idx = i;
+					}	
+				}
 			}
-		}
 
-		char *real_path;
+			char *real_path;
 
+			if(lg_pfx_idx != -1){
+				transmitter_idx = routing_table[lg_pfx_idx].interface_id;
+				//check if packet is destined to local network
+				if (memcmp(routing_table[lg_pfx_idx].gateway, "\x00\x00\x00\x00", 4) == 0 ){
+					real_path = (char *)packet->dest_addr;
+				}else{
+					real_path = (char *)routing_table[lg_pfx_idx].gateway;
+				}
+				// arp lookup
+				int found_mac = 0;
+				//check if destination ip is for local interfaces
+				for(int i=0; i<CACHE_LENGTH; i++){
+					if(memcmp(arp_cache__[i].ip_addr, real_path, 4) == 0){
+						//arp_idx = i;
+						dest_addr = arp_cache__[i].mac_addr;
+						found_mac = 1;
+					}	
+				}
 
-		if(lg_pfx_idx != -1){
-			transmitter_idx = lg_pfx_idx;
-			if (memcmp(routing_table[lg_pfx_idx].gateway, "\x00\x00\x00\x00", 4) == 0 ){
-				real_path = (char *)packet->dest_addr;
+				//check for network errors
+				if(!found_mac){
+					//host unreachable
+					curr_icmp->type = 3;
+					curr_icmp->code = 1;
+					error = 1;
+				}
 			}else{
-				real_path = (char *)routing_table[lg_pfx_idx].gateway;
-			}
-			/*forward logic*/
-			//consult arp cache
-			int found_mac = 0;
-			for(int i=0; i<CACHE_LENGTH; i++){
-				if(memcmp(arp_cache__[i].ip_addr, real_path, 4) == 0){
-					arp_idx = i;
-					found_mac = 1;
-				}	
-			}
-			//check for network errors
-			if(!found_mac){
-				//host unreachable
+				//network unreacheable
 				curr_icmp->type = 3;
-				curr_icmp->code = 1;
+				curr_icmp->code = 0;
 				error = 1;
 			}
+			//decrease ttl;
+			if(!error) packet->ttl--;
 		}else{
-			//network unreacheable
-			curr_icmp->type = 3;
-			curr_icmp->code = 0;
-			error = 1;
+			dest_addr = interface_list_[interface_idx].mac_addr;
+			printf("digesting packet\n");
+			return;
 		}
-		//decrease ttl;
-		packet->ttl--;
 	}
 
 	//encapsulation here
-	encapsulation(frame_f, arp_idx, packet, len, or_frame, arp_cache__, curr_icmp, interface_list_, error, packet_inf, transmitter_idx);
+	encapsulation(frame_f, packet, len, or_frame, dest_addr, curr_icmp, interface_list_, error, packet_inf, transmitter_idx);
 	send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, len);
 	printf("forwading packet to %s\n", packet_inf->dest_ip_addr);
 }
@@ -384,11 +399,13 @@ void handle_arp(struct frame_fields *frame_, uint8_t *or_frame, ssize_t len, str
 }
 
 void handle_icmp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct interface *interface_list_, int transmitter_id){
-	//handle ICMP here
-	packet->protocol = 1;	
 
 	//copy ip header + 8 bytes payload
 	memcpy(or_frame+42, or_frame+14, 28);
+
+	//handle ICMP here
+	packet->protocol = 1;	
+
 
 	//update ip field
 	memcpy(&packet->dest_addr, &packet->src_addr, 4);
@@ -441,7 +458,7 @@ void handle_icmp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, s
 	}
 }
 
-void encapsulation(struct frame_fields *frame_, int arp_idx_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, struct arp_cache *arp_cache_, struct icmp *curr_icmp,  struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id){
+void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, uint8_t *dest_addr_, struct icmp *curr_icmp,  struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id){
 	/*encapsulation logic*/
 	if(error_){
 		//src mac_addr is received interface id
@@ -451,7 +468,7 @@ void encapsulation(struct frame_fields *frame_, int arp_idx_, struct ip_header *
 		handle_icmp(len, frame_, or_frame, packet_, packet_inf, curr_icmp, interface_list_, transmitter_id);
 	}else{
 		memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
-		memcpy(frame_->dest_addr, arp_cache_[arp_idx_].mac_addr, 6);
+		memcpy(frame_->dest_addr, dest_addr_, 6);
 	}
 
 
@@ -471,4 +488,13 @@ void encapsulation(struct frame_fields *frame_, int arp_idx_, struct ip_header *
 	memcpy(or_frame+(len-4), &crc ,4);
 }
 
+//function checks if an ip address matches one of local interfaces'
+int is_interface(struct interface *interface_list, uint8_t *ip_addr){
+	for(int i=0; i<NUMBER_INTERFACES; i++){
+		if(memcmp(interface_list[i].ip_addr, ip_addr, 4) == 0){
+			return i;
+		}
+	}
+	return -1;
+}
 

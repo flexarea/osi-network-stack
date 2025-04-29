@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
-
 #include "util.h"
 #include "cs431vde.h"
 
@@ -20,7 +19,7 @@ main(int argc, char *argv[])
     char *data_as_hex;
 
     int connect_to_remote_switch = 0;
-    char *local_vde_cmd[] = { "vde_plug", NULL };
+	char *local_vde_cmd[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net2.vde", NULL};
     char *remote_vde_cmd[] = { "ssh", "entuyenabo@weathertop.cs.middlebury.edu",
                                       "/home/entuyenabo/cs431/bin/vde_plug",
                                       NULL };
