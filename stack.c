@@ -27,7 +27,7 @@ const uint8_t interface_ip[]={0x01,0x02,0x01,0x01};       //Interface1 IP addres
 const uint8_t interface2_ip[]={0x01,0x03,0x01,0x01};       //Interface2 IP address
 const uint8_t interface3_ip[]={0x01,0x04,0x01,0x01};       //Interface3 IP address
 
-int eth_cmp(struct frame_fields *frame_f,  const uint8_t *mac_addr);
+int eth_cmp(struct frame_fields *frame_f,  struct interface *interface_list_, int *receiver);
 
 struct frame_flags cf_flag; //current frame flag
 struct frame_fields frame_header;
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]){
 void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_){
 
 	//struct pollfd *pfds; 
-
+	int receiver = 0;
 	char *data_as_hex;
 	uint8_t frame[1600];
 	ssize_t frame_len;
@@ -137,13 +137,13 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 	*/
 	
 	//read a single frame from switch1
-	while((frame_len = receive_ethernet_frame(interface_list_[0].switch_[0], frame)) > 0) {
+	while((frame_len = receive_ethernet_frame(interface_list_[receiver].switch_[0], frame)) > 0) {
 		data_as_hex = binary_to_hex(frame, frame_len);
 
 
 		//retrieve frame fields information
 		frame_f = (struct frame_fields *)frame;
-		handle_frame(data_as_hex, frame_len, frame_f,  curr_frame, data_size,  curr_check_sum, mac_addr, frame);
+		handle_frame(data_as_hex, frame_len, frame_f,  curr_frame, data_size,  curr_check_sum, mac_addr, frame, interface_list_, &receiver);
 		//jump to beginning of ip header
 		uint8_t *ether_payload = frame + 14;
 		//cast to ip struct (extract ip header fields)
@@ -190,7 +190,7 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 			//continue;
 			//
 			if(ntohs(frame_f->type) == 2048){
-				handle_packet(frame_len, frame_f, frame, ip_packet, &ip_packet_info, &curr_packet_icmp, routing_table, arp_cache, interface_list_, 0);
+				handle_packet(frame_len, frame_f, frame, ip_packet, &ip_packet_info, &curr_packet_icmp, routing_table, arp_cache, interface_list_, &receiver);
 				//check ip icmp
 				if(!ip_packet_info.valid_length){ //actually change comparison here, it's wrong
 					printf("somewhere here\n");
@@ -220,7 +220,7 @@ skip:
 	}
 }
 
-void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, struct frame_flags *curr_frame, ssize_t *data_size, uint32_t *curr_check_sum, const uint8_t *mac_addr, uint8_t *or_frame){
+void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, struct frame_flags *curr_frame, ssize_t *data_size, uint32_t *curr_check_sum, const uint8_t *mac_addr, uint8_t *or_frame, struct interface *interface_list_, int *receiver){
 
 	//partition frame fields
 	*data_size = len - 14 - 4; //record datasize
@@ -231,7 +231,7 @@ void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, 
 	}else{
 		curr_frame->is_broadcast = 0;
 	}
-	if(eth_cmp(frame_f, mac_addr) == 1){
+	if(eth_cmp(frame_f, interface_list_, receiver) == 1){
 		curr_frame->is_for_me = 1;
 	}else{
 		curr_frame->is_for_me = 0;
@@ -245,17 +245,23 @@ void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, 
 	curr_frame->valid_length = (*data_size < 46) ? 0 : 1;
 }
 
-int eth_cmp(struct frame_fields *frame_f,  const uint8_t *mac_addr){
-	for(int i=0; i<6; i++){
+int eth_cmp(struct frame_fields *frame_f, struct interface *interface_list_, int *receiver){
+	for(int i=0; i<NUMBER_INTERFACES; i++){
+		if(memcmp(frame_f->dest_addr, interface_list_[i].mac_addr, 6) == 0){
+			*receiver = i;
+			return 1;
+		}
+		/*
 		if(frame_f->dest_addr[i] != mac_addr[i]){
 			return 0;
 		}
+		*/
 	}	
-	return 1;
+	return 0;
 }
 
 //function to extract and process ip header fields
-void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct table_r *routing_table, struct arp_cache *arp_cache__, struct interface *interface_list_, int receiver_id){
+void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct table_r *routing_table, struct arp_cache *arp_cache__, struct interface *interface_list_, int *receiver_id){
 	//receiver_id is the index of the interface that received the packet
 	//printf("handling ip packet...\n");
 
@@ -265,9 +271,8 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	int lg_prefix = -1;
 	//int arp_idx; 
 	int error = 0;
-	int transmitter_idx = receiver_id;
+	int transmitter_idx = *receiver_id;
 	uint8_t *final_dest_addr;
-	int interface_idx; //id of interface to which potential packet is destined to
 
 	//convert dest address to ip str
 	inet_ntop(AF_INET, &(packet->dest_addr), packet_inf->dest_ip_addr, INET_ADDRSTRLEN);	
@@ -335,6 +340,7 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 			char *real_path;
 
 			if(lg_pfx_idx != -1){
+				//save the interface id that matches the dest addr found in routing table
 				transmitter_idx = routing_table[lg_pfx_idx].interface_id;
 				//check if packet is destined to local network
 				if (memcmp(routing_table[lg_pfx_idx].gateway, "\x00\x00\x00\x00", 4) == 0 ){
@@ -366,9 +372,14 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 				curr_icmp->code = 0;
 				error = 1;
 			}
-			//decrease ttl;
 			if(!error) packet->ttl--;
 	}
+
+	//check for error again
+	if(error){
+		transmitter_idx = *receiver_id; //use the interface that received the packet
+	}	
+
 
 	//encapsulation here
 	encapsulation(frame_f, packet, len, or_frame, final_dest_addr, curr_icmp, interface_list_, error, packet_inf, transmitter_idx);
@@ -382,8 +393,8 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 	/*encapsulation logic*/
 	if(error_){
 		//src mac_addr is received interface id
-		memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
 		memcpy(frame_->dest_addr, frame_->src_addr, 6);
+		memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
 		//ICMP encapsulation
 		handle_icmp(len, frame_, or_frame, packet_, packet_inf, curr_icmp, interface_list_, transmitter_id);
 	}else{
