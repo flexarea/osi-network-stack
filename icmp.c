@@ -20,6 +20,9 @@ void handle_icmp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, s
 
 	//handle ICMP here
 	packet->protocol = 1;	
+	packet->total_length = htons(56);
+	packet->ttl = 64;
+	packet->identification = htons(5); //should technically be random
 
 	//update ip field
 	memcpy(&packet->dest_addr, &packet->src_addr, 4);
