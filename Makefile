@@ -12,8 +12,8 @@ hexdump: hexdump.o util.o
 	$(CC) $(CFLAGS) hexdump.o util.o -o hexdump
 hexdump.o: hexdump.c util.h
 	$(CC) $(CFLAGS) -c hexdump.c -o hexdump.o
-stack: stack.o util.o arp.o icmp.o cs431vde.c crc32.c
-	$(CC) $(CFLAGS) stack.o util.o arp.o icmp.o cs431vde.c crc32.c -o stack
+stack: stack.o util.o arp.o icmp.o ip.o ethernet.o cs431vde.c crc32.c
+	$(CC) $(CFLAGS) stack.o util.o arp.o ip.o icmp.o ethernet.o cs431vde.c crc32.c -o stack
 stack.o: stack.c util.h
 	$(CC) $(CFLAGS) -c stack.c -o stack.o
 sender: sender.c cs431vde.c util.o
@@ -30,8 +30,13 @@ util.o: util.c util.h
 	$(CC) $(CFLAGS) -c util.c -o util.o
 arp.o: arp.c stack.h
 	$(CC) $(CFLAGS) -c arp.c -o arp.o
-icmp.o: icmp.c stack.h
+icmp.o: icmp.c stack.h icmp.h
 	$(CC) $(CFLAGS) -c icmp.c -o icmp.o
+ip.o: ip.c stack.h ip.h
+	$(CC) $(CFLAGS) -c ip.c -o ip.o
+ethernet.o: ethernet.c stack.h ethernet.h
+	$(CC) $(CFLAGS) -c ethernet.c -o ethernet.o
+
 
 .PHONY:clean
 clean:

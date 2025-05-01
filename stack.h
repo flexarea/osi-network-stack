@@ -5,23 +5,14 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include "icmp.h"
+#include "ip.h"
+#include "ethernet.h"
 
 #define NUMBER_INTERFACES 3
-
-typedef struct frame_fields{
-	uint8_t dest_addr[6];
-	uint8_t src_addr[6];
-	uint16_t type;
-}frame_fields;
+#define CACHE_LENGTH 3
+#define TABLE_LENGTH 3
 
 
-typedef struct frame_flags{
-	int is_broadcast;	
-	int is_for_me;	
-	int check_sum_match;	
-	int valid_length ;	
-	uint32_t rcv_check_sum;
-}frame_flags;
 
 typedef struct router{
 	uint8_t interface_mac;
@@ -50,25 +41,6 @@ typedef struct table_r{
 	//add more below
 }table_r;
 
-typedef struct ip_header{
-	uint8_t version_IHL; //version and IHL
-	uint8_t type_of_service;
-	uint16_t total_length;
-	uint16_t identification;
-	uint16_t flag_fragment_offset; //flag and fragment offset
-	uint8_t ttl;
-	uint8_t protocol;
-	uint16_t header_checksum;
-	uint8_t src_addr[4];
-	uint8_t dest_addr[4];
-}ip_header;
-
-typedef struct packet_info{
-	char src_ip_addr[INET_ADDRSTRLEN];
-	char  dest_ip_addr[INET_ADDRSTRLEN];
-	int valid_checksum;
-	int valid_length;
-}packet_info;
 
 typedef struct arp{
 	uint16_t hardware_type;
@@ -88,10 +60,8 @@ typedef struct arp_cache{
 }arp_cache;
 
 
-void handle_frame(char *data_as_hex, ssize_t len, struct frame_fields *frame_f, struct frame_flags *curr_frame, ssize_t *data_size, uint32_t *curr_check_sum, const uint8_t *mac_addr, uint8_t *or_frame, struct interface *interface_list_, int *receiver);
 void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_);
 void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, uint8_t *dest_addr, struct icmp *curr_icmp, struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id);
-void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct table_r *routing_table, struct arp_cache *arp_cache__, struct interface *interface_list_, int *receiver_id);
 void handle_arp(struct frame_fields *frame_, uint8_t *or_frame, ssize_t len, struct packet_info *packet_inf, struct interface *interface_list_);
 int is_interface(struct interface *interface_list, uint8_t *ip_addr);
 #endif
