@@ -60,8 +60,10 @@ typedef struct arp_cache{
 }arp_cache;
 
 
-void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_);
-void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, uint8_t *dest_addr, struct icmp *curr_icmp, struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id);
+void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_, int net_id);
+
 void handle_arp(struct frame_fields *frame_, uint8_t *or_frame, ssize_t len, struct packet_info *packet_inf, struct interface *interface_list_);
+
 int is_interface(struct interface *interface_list, uint8_t *ip_addr);
+void network_configuration(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_);
 #endif

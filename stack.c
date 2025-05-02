@@ -72,20 +72,15 @@ int main(int argc, char *argv[]){
 	memcpy(interface_list[2].ip_addr, interface3_ip ,4);
 
 
-	interface_receiver(&frame_header, &cf_flag, &cur_cfs, &d_size, eth_addr, interface_routing_table, interface_arp_cache, interface_list);
+	network_configuration(&frame_header, &cf_flag, &cur_cfs, &d_size, interface_routing_table, interface_arp_cache, interface_list);
 	free(interface_routing_table);
 	free(interface_arp_cache);
 	free(interface_list);
 	return 0;
 }
 
-void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, const uint8_t *mac_addr, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_){
+void network_configuration(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_){
 
-	//struct pollfd *pfds; 
-	int receiver = 0;
-	char *data_as_hex;
-	uint8_t frame[1600];
-	ssize_t frame_len;
 	int connect_to_remote_switch = 0;
 	char *local_vde_cmd[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net1.vde", NULL};
 	char *local_vde_cmd2[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net2.vde", NULL};
@@ -114,10 +109,15 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 	}
 	
 	/*polling implementation*/
-	/*
-	pfds = (struct pollfd *pfds) malloc(NUMBER_INTERFACES * sizeof(struct pollfd));
+	struct pollfd *pfds =  malloc(NUMBER_INTERFACES * sizeof(struct pollfd));
+	if (pfds == NULL) {
+        perror("Failed to allocate memory for poll fds");
+        exit(1);
+    }
+
 	//assign POLLIN to each pollfd events
 	for(int i=0; i<NUMBER_INTERFACES; i++){
+		pfds[i].fd = interface_list_[i].switch_[0];
 		pfds[i].events = POLLIN;
 	}
 
@@ -130,14 +130,22 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		for(int i=0; i<NUMBER_INTERFACES; i++){
 			if(pfds[i].revents & POLLIN){
 
-				handle_interface(frame_f, curr_frame, curr_check_sum, data_size, *mac_addr, routing_table, arp_cache, interface_list_);
+				interface_receiver(frame_f, curr_frame, curr_check_sum, data_size, routing_table, arp_cache, interface_list_, i);
 			}
 		}
 	}
-	*/
 	
-	//read a single frame from switch1
-	while((frame_len = receive_ethernet_frame(interface_list_[receiver].switch_[0], frame)) > 0) {
+	free(pfds);
+}
+
+void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_, int net_id){
+
+	int receiver = net_id;
+	char *data_as_hex;
+	uint8_t frame[1600];
+	ssize_t frame_len;
+
+	if ((frame_len = receive_ethernet_frame(interface_list_[receiver].switch_[0], frame)) > 0) {
 		data_as_hex = binary_to_hex(frame, frame_len);
 
 		//retrieve frame fields information
@@ -218,46 +226,3 @@ skip:
 		exit(1);
 	}
 }
-
-
-void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, uint8_t *dest_addr_, struct icmp *curr_icmp,  struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id){
-	/*encapsulation logic*/
-	if(error_){
-		//src mac_addr is received interface id
-		memcpy(frame_->dest_addr, frame_->src_addr, 6);
-		memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
-		//ICMP encapsulation
-		handle_icmp(len, frame_, or_frame, packet_, packet_inf, curr_icmp, interface_list_, transmitter_id);
-	}else{
-		memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
-		memcpy(frame_->dest_addr, dest_addr_, 6);
-	}
-
-
-	or_frame[22] = packet_->ttl;
-
-	or_frame[24] = 0;
-	or_frame[25] = 0;
-	//recalculate ip checksum
-	uint16_t new_checksum = ip_checksum(or_frame+14, 20);	
-
-	//compute icmp checksum
-	or_frame[24] = (new_checksum >>8) & 0xFF;
-	or_frame[25] = new_checksum & 0xFF;
-
-	//compute checksum
-	uint32_t crc = crc32(0, or_frame, len-4);	
-	memcpy(or_frame+(len-4), &crc ,4);
-}
-
-//function checks if an ip address matches one of local interfaces'
-int is_interface(struct interface *interface_list, uint8_t *ip_addr){
-	for(int i=0; i<NUMBER_INTERFACES; i++){
-		if(memcmp(interface_list[i].ip_addr, ip_addr, 4) == 0){
-			printf("found match in is_interface\n");
-			return i;
-		}
-	}
-	return -1;
-}
-
