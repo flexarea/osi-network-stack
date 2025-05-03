@@ -13,7 +13,7 @@
 #include <sys/socket.h>
 
 
-void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize_t len, uint8_t *or_frame, uint8_t *dest_addr_, struct icmp *curr_icmp,  struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id){
+void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize_t *len, uint8_t *or_frame, uint8_t *dest_addr_, struct icmp *curr_icmp,  struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id){
 	/*encapsulation logic*/
 	if(error_){
 		//src mac_addr is received interface id
@@ -39,8 +39,8 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 	or_frame[25] = new_checksum & 0xFF;
 
 	//compute checksum
-	uint32_t crc = crc32(0, or_frame, len-4);	
-	memcpy(or_frame+(len-4), &crc ,4);
+	uint32_t crc = crc32(0, or_frame, *len-4);	
+	memcpy(or_frame+(*len-4), &crc ,4);
 }
 
 //function checks if an ip address matches one of local interfaces'

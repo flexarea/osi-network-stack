@@ -30,6 +30,7 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	int error = 0;
 	int transmitter_idx = *receiver_id;
 	uint8_t *final_dest_addr;
+	ssize_t curr_len = len;
 
 	//convert dest address to ip str
 	inet_ntop(AF_INET, &(packet->dest_addr), packet_inf->dest_ip_addr, INET_ADDRSTRLEN);	
@@ -137,9 +138,9 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 		transmitter_idx = *receiver_id; //use the interface that received the packet
 	}	
 
-
+	
 	//encapsulation here
-	encapsulation(frame_f, packet, len, or_frame, final_dest_addr, curr_icmp, interface_list_, error, packet_inf, transmitter_idx);
-	send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, len);
+	encapsulation(frame_f, packet, &curr_len, or_frame, final_dest_addr, curr_icmp, interface_list_, error, packet_inf, transmitter_idx);
+	send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
 	printf("forwading packet to %s\n", packet_inf->dest_ip_addr);
 }

@@ -14,7 +14,7 @@
 #include <poll.h>
 #include <sys/random.h>
 
-void handle_icmp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct interface *interface_list_, int transmitter_id){
+void handle_icmp(ssize_t *len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct interface *interface_list_, int transmitter_id){
 
 	//copy ip header + 8 bytes payload
 	memcpy(or_frame+42, or_frame+14, 28);
@@ -50,6 +50,9 @@ void handle_icmp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, s
 	//update up length
 	uint16_t new_total_length = htons(56);  //20+8+28
 	memcpy(or_frame+16, &new_total_length, 2);
+	//update ethernet length
+	*len = 74;
+	
 
 	//console output
 	if(curr_icmp->type == 3){

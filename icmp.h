@@ -16,7 +16,7 @@ typedef struct icmp{
 	int code;
 }icmp;
 
-void handle_icmp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct interface *interface_list_, int transmitter_id);
+void handle_icmp(ssize_t *len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf, struct icmp *curr_icmp, struct interface *interface_list_, int transmitter_id);
 
 uint16_t rand_generator();
 
