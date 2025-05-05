@@ -24,7 +24,7 @@ void handle_icmp(ssize_t *len, struct frame_fields *frame_f, uint8_t *or_frame, 
 	//identification number
 	packet->total_length = htons(56);
 	packet->ttl = 64;
-	packet->identification = htons(rand_generator()); //should technically be random
+	packet->identification = htons(0); //should technically be random
 
 	//update ip field
 	memcpy(packet->dest_addr, packet->src_addr, 4);
