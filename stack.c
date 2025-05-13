@@ -82,7 +82,7 @@ int main(int argc, char *argv[]){
 void network_configuration(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_){
 
 	int connect_to_remote_switch = 0;
-	char *local_vde_cmd[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net1.vde", NULL};
+	char *local_vde_cmd[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net1.vde", NULL}; //replace /tmp/net1.vde with /tmp/net0.vde for TCP
 	char *local_vde_cmd2[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net2.vde", NULL};
 	char *local_vde_cmd3[] = {"vde_plug", "/home/entuyenabo/cs432/cs431/tmp/net3.vde", NULL};
 	char *remote_vde_cmd[] = {"ssh", "entuyenabo@weathertop.cs.middlebury.edu", "/home/entuyenabo/cs431/bin/vde_plug", NULL};

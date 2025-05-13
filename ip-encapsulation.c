@@ -19,9 +19,14 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 		//src mac_addr is received interface id
 		memcpy(frame_->dest_addr, frame_->src_addr, 6);
 		memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
+		//check ip code here and choose between icmp and tcp
+		
 		//ICMP encapsulation
 		handle_icmp(len, frame_, or_frame, packet_, packet_inf, curr_icmp, interface_list_, transmitter_id);
 	}else{
+		if(packet_->protocol == 6){
+
+		}
 		memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
 		memcpy(frame_->dest_addr, dest_addr_, 6);
 	}
@@ -38,7 +43,7 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 	or_frame[24] = (new_checksum >>8) & 0xFF;
 	or_frame[25] = new_checksum & 0xFF;
 
-	//compute checksum
+	//compute frame checksum
 	uint32_t crc = crc32(0, or_frame, *len-4);	
 	memcpy(or_frame+(*len-4), &crc ,4);
 }

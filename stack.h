@@ -11,8 +11,8 @@
 #define NUMBER_INTERFACES 3
 #define CACHE_LENGTH 3
 #define TABLE_LENGTH 3
-
-
+#define TCP_PORT 1234
+#define TCP_IP {0x01,0x02,0x01,0x01}; //Interface1 IP address
 
 typedef struct router{
 	uint8_t interface_mac;
