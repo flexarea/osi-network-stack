@@ -44,10 +44,7 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	packet_inf->valid_length = (ntohs(packet->total_length) > 20) ? 1 : 0;
 	packet_inf->valid_checksum = (ip_checksum(or_frame + 14, 20) == 0) ? 1 : 0;
 
-	/*
-	 * comment out for TCP testing
 	if(!packet_inf->valid_checksum) return;
-	*/
 	if(!packet_inf->valid_length) return;
 
 
@@ -163,7 +160,6 @@ if(packet->protocol == 6) {
         case TCP_REG:
             // Send the packet (already encapsulated)
             send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
-			printf("TCP REPLY\n");
             printf("forwarding packet to %s\n", packet_inf->dest_ip_addr);
             break;
 
@@ -185,9 +181,6 @@ if(packet->protocol == 6) {
 }
 
 	//regular forwarding
-    encapsulation(frame_f, packet, &curr_len, or_frame, final_dest_addr, curr_icmp,
-                 interface_list_, error, packet_inf, transmitter_idx,
-                 tcp_connection_table_, 0);
 	send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
 	printf("forwading packet to %s\n", packet_inf->dest_ip_addr);
 

@@ -7,12 +7,14 @@
 #include "icmp.h"
 #include "ip.h"
 #include "ethernet.h"
+#include "tcp.h"
 
 #define NUMBER_INTERFACES 3
 #define CACHE_LENGTH 3
 #define TABLE_LENGTH 3
-#define TCP_PORT 1234
-#define TCP_IP {0x01,0x02,0x01,0x01}; //Interface1 IP address
+#define HOST_TCP_PORT 1234
+#define TCP_IP {0xC0,0xA8,0x00,0x05} //Interface1 IP address
+#define TCP_CONNECTION_LIMIT 10
 
 typedef struct router{
 	uint8_t interface_mac;
@@ -60,10 +62,10 @@ typedef struct arp_cache{
 }arp_cache;
 
 
-void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_, int net_id);
+void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_, int net_id, struct tcp_connection *tcp_connection_table_);
 
 void handle_arp(struct frame_fields *frame_, uint8_t *or_frame, ssize_t len, struct packet_info *packet_inf, struct interface *interface_list_);
 
 int is_interface(struct interface *interface_list, uint8_t *ip_addr);
-void network_configuration(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_);
+void network_configuration(struct frame_fields *frame_f, struct frame_flags *curr_frame, uint32_t *curr_check_sum, ssize_t *data_size, struct table_r *routing_table, struct arp_cache *arp_cache, struct interface *interface_list_, struct tcp_connection *tcp_connection_table_);
 #endif

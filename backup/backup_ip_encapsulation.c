@@ -14,8 +14,10 @@
 #include <sys/socket.h>
 
 
-void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize_t *len, uint8_t *or_frame, uint8_t *dest_addr_, struct icmp *curr_icmp,  struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id, struct tcp_connection *tcp_connection_table_, int flag){
+void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize_t *len, uint8_t *or_frame, uint8_t *dest_addr_, struct icmp *curr_icmp,  struct interface *interface_list_, int error_, struct packet_info *packet_inf, int transmitter_id, struct tcp_connection *tcp_connection_table_, int *transmission_loop_, int flag){
+	if(flag > 1) return; //3rd tcp loop iteration, stop here
 
+	int tcp_transmission_status = -1;  //-1 (no forwarding) 0 (forwarding)
 	/*encapsulation logic*/
 	if(error_){
 		//src mac_addr is received interface id
@@ -27,14 +29,24 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 		handle_icmp(len, frame_, or_frame, packet_, packet_inf, curr_icmp, interface_list_, transmitter_id);
 	}else{
 
-		if(flag == 0){
-			if(packet_->protocol == 6){
-				memcpy(frame_->dest_addr, frame_->src_addr, 6);
-				memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
-			}else{
-				memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
-				memcpy(frame_->dest_addr, dest_addr_, 6);
+		if(packet_->protocol == 6){
+			//call tcp handler here
+			tcp_tranmission_status = handle_tcp(*len, or_frame, packet_, packet_inf, tcp_connection_table_, flag);
+
+			if(tcp_transmission_status == 1){
+				*transmission_loop_ = 2;	
 			}
+			if(tcp_transmission_status == -1){
+				*transmission_loop_ = -1;	
+			}
+			if(tcp_transmission_status == 0 && flag == 0){
+				*transmission_loop_ = 1;	
+			}
+		}
+
+		if(flag == 0){
+			memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
+			memcpy(frame_->dest_addr, dest_addr_, 6);
 		} 
 
 	}
