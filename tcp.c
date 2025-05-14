@@ -32,7 +32,7 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	uint8_t control_bits = ntohs(tcp_header->flag) & 0x3F;  //bitmask to extract flags only
 	uint8_t data_offset = (ntohs(tcp_header->flag) >> 12) & 0xF; //extract data offset
 	uint8_t tcp_header_len = data_offset*4;
-	uint16_t data_octets = (uint16_t)len - 14 -  20 - tcp_header_len; //len - ethernet(14) - ip(20) - ethernet checksum (4)
+	uint16_t data_octets = (uint16_t)len - 14 -  20 - tcp_header_len; //
 	uint16_t tcp_segment_len = tcp_header_len + data_octets;
 
 	printf("received data octets: %hu\n", data_octets);
@@ -50,14 +50,14 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	}
 
 	//checksum
-	uint16_t curr_checksum = calculate_tcp_checksum(packet, or_frame+34, tcp_segment_len);
+	uint16_t curr_checksum = calculate_tcp_checksum(packet, or_frame+34, tcp_segment_len, 1);
 	/*
 	 * comment out for TCP testing*/
 
-	 if(curr_checksum != 0){
-	 printf("Dropping packet: Incorrect Checksum\n");
-	 //return TCP_NONE;
-	 }
+	if(curr_checksum != 0){
+		printf("Dropping packet: Incorrect Checksum\n");
+		//return TCP_NONE;
+	}
 
 	/*check if connection does not exist*/
 	if((connection_idx = connection_lookup(tcp_connection_table_, packet->src_addr )) == -1){
@@ -86,12 +86,16 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	or_frame[51] = 0;
 
 	//compute TCP checksum
-	uint16_t new_checksum = calculate_tcp_checksum(packet,  or_frame+34, tcp_segment_len);
+	uint16_t new_checksum = calculate_tcp_checksum(packet,  or_frame+34, tcp_segment_len, 0);
+	tcp_header->checksum = new_checksum;
+	/*
 	or_frame[50] = (new_checksum >>8) & 0xFF;
 	or_frame[51] = new_checksum & 0xFF;
+	*/
 
 	//update ip string
 	memcpy(packet_inf->dest_ip_addr, tcp_connection_table_[connection_idx].ip_str, INET_ADDRSTRLEN);
+
 	return new_connection_status;
 }
 
@@ -218,35 +222,64 @@ uint32_t tcp_seq_generator(uint32_t prev){
 	return buf;
 }
 
-uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, uint16_t tcp_len) {
-	//Build pseudo-header (12 bytes)
-    uint8_t pseudo_header[12];
-    memcpy(pseudo_header, packet->src_addr, 4);      // Source IP
-    memcpy(pseudo_header + 4, packet->dest_addr, 4); // Dest IP
-    pseudo_header[8] = 0;                        // Zero
-    pseudo_header[9] = 6;              // Protocol=6
+uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, uint16_t tcp_len, int verify){
 
-	uint16_t tcp_len_net = htons(tcp_len);
-	memcpy(pseudo_header + 10, &tcp_len_net, 2); //length
+	struct tcp_pseudo_header pseudo;
 
-    // Zero TCP checksum field (offset 16)
-    uint8_t *tcp_copy = malloc(tcp_len);
-    memcpy(tcp_copy, tcp_segment, tcp_len);
-    memset(tcp_copy + 16, 0, 2); // Clear checksum field
+	memcpy(pseudo.src_addr, packet->src_addr, 4);
+	memcpy(pseudo.dest_addr, packet->dest_addr, 4);
+	pseudo.zero = 0;
+	pseudo.protocol = 6;  // TCP
+	pseudo.tcp_len = htons(tcp_len);
 
-    // Combine pseudo-header and TCP segment
-    uint8_t *buffer = malloc(12 + tcp_len);
-    memcpy(buffer, pseudo_header, 12);
-    memcpy(buffer + 12, tcp_copy, tcp_len);
+	//save original checksum if 
 
-    // Compute checksum
-    uint16_t checksum = ip_checksum(buffer, 12 + tcp_len);
+	uint16_t orig_checksum = *((uint16_t *)(tcp_segment + 16));
 
-	// clean up
-    free(tcp_copy);
-    free(buffer);
+	/*
+	if (!verify) {
 
-    return checksum;
+		orig_checksum = *((uint16_t*)(tcp_segment + 16));
+		// Set checksum field to zero for calculation
+		*((uint16_t*)(tcp_segment + 16)) = 0;
+	}*/
 
+
+	// Create buffer for pseudo-header + TCP segment
+	int total_len = sizeof(struct tcp_pseudo_header) + tcp_len;
+	    
+	//check for padding
+	if (total_len % 2 != 0) {
+        total_len++;
+    }
+
+	uint8_t *buffer = malloc(total_len);
+	if (!buffer) {
+		perror("malloc failed");
+		return 0;
+	}
+
+	// Copy pseudo-header and TCP segment to buffer
+	memcpy(buffer, &pseudo, sizeof(struct tcp_pseudo_header));
+	memcpy(buffer + sizeof(struct tcp_pseudo_header), tcp_segment, tcp_len);
+
+	// Calculate checksum over the entire buffer
+	uint16_t checksum = ip_checksum(buffer, sizeof(struct tcp_pseudo_header) + tcp_len);
+
+	// Restore original checksum if we're calculating a new one
+	
+	/*
+	if (!verify) {
+		*((uint16_t*)(tcp_segment + 16)) = orig_checksum;
+	}*/
+
+	// Clean up
+	free(buffer);
+
+	// For debugging, print the original and calculated checksums
+	printf("TCP Checksum: Original=0x%04x, Calculated=0x%04x\n",
+			ntohs(orig_checksum), ntohs(checksum));
+
+	return checksum;
 }
 

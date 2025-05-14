@@ -25,6 +25,14 @@ typedef struct tcp{
 	uint16_t urgent_pointer;
 }tcp;
 
+typedef struct tcp_pseudo_header {
+    uint8_t src_addr[4];
+    uint8_t dest_addr[4];
+    uint8_t zero;
+    uint8_t protocol;
+    uint16_t tcp_len;
+} tcp_pseudo_header;
+
 
 typedef struct tcp_connection{
 	int extreme; //1(connecting) 0(listening)
@@ -46,5 +54,5 @@ int is_space(struct tcp_connection *tcp_connection_table_);
 
 uint32_t tcp_seq_generator(uint32_t prev);
 
-uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_header, uint16_t tcp_payload_len);
+uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_header, uint16_t tcp_payload_len, int verify);
 #endif
