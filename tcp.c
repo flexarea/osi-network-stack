@@ -23,6 +23,7 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	/*
 	 * return 0(transmission) 1(2transmissions) -1(no transmissions)
 	 * */
+	printf("frame length: %d\n", (int) len);
 	uint8_t tcp_ip_addr[] = TCP_IP; //interface listener IP
 	struct tcp *tcp_header = (struct tcp *) (or_frame + 34); //extract tcp payload
 	int connection_idx;
@@ -31,10 +32,10 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	uint8_t control_bits = ntohs(tcp_header->flag) & 0x3F;  //bitmask to extract flags only
 	uint8_t data_offset = (ntohs(tcp_header->flag) >> 12) & 0xF; //extract data offset
 	uint8_t tcp_header_len = data_offset*4;
-	uint16_t data_octets = len - 14 - 20 - tcp_header_len;
-	uint16_t tcp_payload_len = len - 14 - 20;
+	uint16_t data_octets = (uint16_t)len - 14 -  20 - tcp_header_len; //len - ethernet(14) - ip(20) - ethernet checksum (4)
+	uint16_t tcp_segment_len = tcp_header_len + data_octets;
 
-	printf("received data octets: %d\n", (int) data_octets);
+	printf("received data octets: %hu\n", data_octets);
 
 	//verifiy ip addr match
 	if(memcmp(tcp_ip_addr, packet->dest_addr, 4) != 0){
@@ -49,7 +50,7 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	}
 
 	//checksum
-	uint16_t curr_checksum = calculate_tcp_checksum(packet, or_frame+34, tcp_payload_len);
+	uint16_t curr_checksum = calculate_tcp_checksum(packet, or_frame+34, tcp_segment_len);
 	/*
 	 * comment out for TCP testing*/
 
@@ -70,23 +71,24 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	//handle TCP payload
 	new_connection_status = handle_tcp_payload(or_frame, tcp_header, packet_inf, control_bits, data_octets, data_offset, tcp_connection_table_, packet, connection_idx, flag, tcp_header_len);
 
-	//initialize checksum to zero
-	or_frame[50] = 0;
-	or_frame[51] = 0;
-
-	//compute TCP checksum
-	uint16_t new_checksum = calculate_tcp_checksum(packet,  or_frame+34, tcp_payload_len);
-	or_frame[50] = (new_checksum >>8) & 0xFF;
-	or_frame[51] = new_checksum & 0xFF;
-
 	/*update ip field*/
 	memcpy(packet->dest_addr, packet->src_addr, 4);
 	memcpy(packet->src_addr, tcp_ip_addr, 4);
 
 	//TTL
 	packet->ttl = 64;
+
 	//identification number
 	packet->identification = htons(0); //should technically be random
+
+	//initialize checksum to zero
+	or_frame[50] = 0;
+	or_frame[51] = 0;
+
+	//compute TCP checksum
+	uint16_t new_checksum = calculate_tcp_checksum(packet,  or_frame+34, tcp_segment_len);
+	or_frame[50] = (new_checksum >>8) & 0xFF;
+	or_frame[51] = new_checksum & 0xFF;
 
 	//update ip string
 	memcpy(packet_inf->dest_ip_addr, tcp_connection_table_[connection_idx].ip_str, INET_ADDRSTRLEN);
@@ -216,54 +218,35 @@ uint32_t tcp_seq_generator(uint32_t prev){
 	return buf;
 }
 
-uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_header, uint16_t tcp_payload_len) {
-	// Create a buffer for the pseudo-header + TCP segment
-	int total_len = 12 + tcp_payload_len;
+uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, uint16_t tcp_len) {
+	//Build pseudo-header (12 bytes)
+    uint8_t pseudo_header[12];
+    memcpy(pseudo_header, packet->src_addr, 4);      // Source IP
+    memcpy(pseudo_header + 4, packet->dest_addr, 4); // Dest IP
+    pseudo_header[8] = 0;                        // Zero
+    pseudo_header[9] = 6;              // Protocol=6
 
-	//check for padding
-	if(total_len % 2 != 0){
-		total_len++;
-	}
+	uint16_t tcp_len_net = htons(tcp_len);
+	memcpy(pseudo_header + 10, &tcp_len_net, 2); //length
 
-	uint8_t *buffer = malloc(total_len);
+    // Zero TCP checksum field (offset 16)
+    uint8_t *tcp_copy = malloc(tcp_len);
+    memcpy(tcp_copy, tcp_segment, tcp_len);
+    memset(tcp_copy + 16, 0, 2); // Clear checksum field
 
-	if (!buffer) {
-		perror("malloc");
-		return 0;
-	}
-	memset(buffer, 0, total_len);
+    // Combine pseudo-header and TCP segment
+    uint8_t *buffer = malloc(12 + tcp_len);
+    memcpy(buffer, pseudo_header, 12);
+    memcpy(buffer + 12, tcp_copy, tcp_len);
 
-	// Fill in the pseudo-header
-	memcpy(buffer, packet->src_addr, 4);                  // Source IP
-	memcpy(buffer + 4, packet->dest_addr, 4);             // Destination IP
-	buffer[8] = 0;										// zero
-	buffer[9] = 6;                                    // Protocol (6 for TCP)
-	uint16_t tcp_len_n = htons(tcp_payload_len);
-	memcpy(buffer + 10, &tcp_len_n, 2);               // TCP Length
-													  
-	//copy original payload
-	uint8_t *tcp_copy = malloc(tcp_payload_len);
-	if (!tcp_copy) {
-		free(buffer);
-		perror("malloc");
-		return 0;
-	}
-	memcpy(tcp_copy, tcp_header, tcp_payload_len);
+    // Compute checksum
+    uint16_t checksum = ip_checksum(buffer, 12 + tcp_len);
 
+	// clean up
+    free(tcp_copy);
+    free(buffer);
 
-	// Zero checksum field in the copy
-	memset(tcp_copy + 16, 0, 2);
+    return checksum;
 
-	// Combine pseudo-header and TCP payload
-	memcpy(buffer + 12, tcp_copy, tcp_payload_len);
-
-	// Calculate checksum
-	uint16_t checksum = ip_checksum(buffer, total_len);
-
-	// Clean up
-	free(tcp_copy);
-	free(buffer);
-
-	return checksum;
 }
 
