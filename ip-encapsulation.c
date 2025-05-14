@@ -22,7 +22,7 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 		memcpy(frame_->dest_addr, frame_->src_addr, 6);
 		memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
 		//check ip code here and choose between icmp and tcp
-		
+
 		//ICMP encapsulation
 		handle_icmp(len, frame_, or_frame, packet_, packet_inf, curr_icmp, interface_list_, transmitter_id);
 	}else{
@@ -42,12 +42,14 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 
 	or_frame[22] = packet_->ttl;
 
+	//set current checksum to 0
 	or_frame[24] = 0;
 	or_frame[25] = 0;
+	
 	//recalculate ip checksum
 	uint16_t new_checksum = ip_checksum(or_frame+14, 20);	
 
-	//compute icmp checksum
+	//set ip checksum
 	or_frame[24] = (new_checksum >>8) & 0xFF;
 	or_frame[25] = new_checksum & 0xFF;
 

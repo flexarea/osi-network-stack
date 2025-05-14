@@ -114,6 +114,14 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			tcp_header_->dest_port = tcp_header_->src_port; //update port 
 			tcp_header_->src_port = htons(HOST_TCP_PORT);
 
+			/*
+
+			if(data_offset_ > 5){
+				//change timestamp
+				int temp_offset = len - 
+				uint32_t client_ts = or_frame
+			}*/
+
 			/*add to connection table*/
 			tcp_connection_table_[connection_id].connection_id = connection_id;
 			memcpy(tcp_connection_table_[connection_id].host_ip_addr, packet->src_addr, 4);
@@ -258,13 +266,14 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 		perror("malloc failed");
 		return 0;
 	}
+	memset(buffer, 0, total_len);
 
 	// Copy pseudo-header and TCP segment to buffer
 	memcpy(buffer, &pseudo, sizeof(struct tcp_pseudo_header));
 	memcpy(buffer + sizeof(struct tcp_pseudo_header), tcp_segment, tcp_len);
 
 	// Calculate checksum over the entire buffer
-	uint16_t checksum = ip_checksum(buffer, sizeof(struct tcp_pseudo_header) + tcp_len);
+	uint16_t checksum = ip_checksum(buffer, total_len);
 
 	// Restore original checksum if we're calculating a new one
 	
@@ -282,4 +291,9 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 
 	return checksum;
 }
+
+uint32_t get_timestamp(uint32_t client_ts){
+	return client_ts++;
+}
+
 

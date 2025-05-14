@@ -33,7 +33,6 @@ typedef struct tcp_pseudo_header {
     uint16_t tcp_len;
 } tcp_pseudo_header;
 
-
 typedef struct tcp_connection{
 	int extreme; //1(connecting) 0(listening)
 	int connection_id;
@@ -55,4 +54,6 @@ int is_space(struct tcp_connection *tcp_connection_table_);
 uint32_t tcp_seq_generator(uint32_t prev);
 
 uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_header, uint16_t tcp_payload_len, int verify);
+
+uint32_t get_timestamp(uint32_t client_ts);
 #endif
