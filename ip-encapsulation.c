@@ -27,7 +27,7 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 		handle_icmp(len, frame_, or_frame, packet_, packet_inf, curr_icmp, interface_list_, transmitter_id);
 	}else{
 
-		if(flag == 0){
+		if(!flag){
 			if(packet_->protocol == 6){
 				memcpy(frame_->dest_addr, frame_->src_addr, 6);
 				memcpy(frame_->src_addr, interface_list_[transmitter_id].mac_addr, 6);
@@ -53,6 +53,11 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 	or_frame[24] = (new_checksum >>8) & 0xFF;
 	or_frame[25] = new_checksum & 0xFF;
 
+	//increase length (THIS IS VERY DANGEROUS)
+	if(packet_->protocol == 6 && !flag){
+		*len+=4;
+	}
+
 	//compute frame checksum
 	uint32_t crc = crc32(0, or_frame, *len-4);	
 	memcpy(or_frame+(*len-4), &crc ,4);
@@ -63,7 +68,6 @@ void encapsulation(struct frame_fields *frame_, struct ip_header *packet_, ssize
 int is_interface(struct interface *interface_list, uint8_t *ip_addr){
 	for(int i=0; i<NUMBER_INTERFACES; i++){
 		if(memcmp(interface_list[i].ip_addr, ip_addr, 4) == 0){
-			printf("found match in is_interface\n");
 			return i;
 		}
 	}

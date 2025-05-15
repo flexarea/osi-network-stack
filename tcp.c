@@ -23,40 +23,42 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	/*
 	 * return 0(transmission) 1(2transmissions) -1(no transmissions)
 	 * */
-	printf("frame length: %d\n", (int) len);
-	uint8_t tcp_ip_addr[] = TCP_IP; //interface listener IP
-	struct tcp *tcp_header = (struct tcp *) (or_frame + 34); //extract tcp payload
-	int connection_idx;
-	int new_connection_status;
 
-	uint8_t control_bits = ntohs(tcp_header->flag) & 0x3F;  //bitmask to extract flags only
-	uint8_t data_offset = (ntohs(tcp_header->flag) >> 12) & 0xF; //extract data offset
-	uint8_t tcp_header_len = data_offset*4;
-	uint16_t data_octets = (uint16_t)len - 14 -  20 - tcp_header_len; //
-	uint16_t tcp_segment_len = tcp_header_len + data_octets;
+	//skip all these check in case of retransmission
+		printf("frame length: %d\n", (int) len);
+		uint8_t tcp_ip_addr[] = TCP_IP; //interface listener IP
+		struct tcp *tcp_header = (struct tcp *) (or_frame + 34); //extract tcp payload
+		int connection_idx;
+		int new_connection_status;
 
-	printf("received data octets: %hu\n", data_octets);
+		uint8_t control_bits = (!flag) ? ntohs(tcp_header->flag) & 0x3F : 17;  //bitmask to extract flags only
+		uint8_t data_offset = (ntohs(tcp_header->flag) >> 12) & 0xF; //extract data offset
+		uint8_t tcp_header_len = data_offset*4;
+		uint16_t data_octets = (uint16_t)len - 14 -  20 - tcp_header_len;
+		uint16_t tcp_segment_len = tcp_header_len + data_octets;
+		uint16_t curr_checksum;
 
-	//verifiy ip addr match
-	if(memcmp(tcp_ip_addr, packet->dest_addr, 4) != 0){
-		printf("Dropping packet: unknown TCP IP address\n");
-		return TCP_NONE;
-	}
+	if(!flag){
 
-	//verify if port match
-	if(ntohs(tcp_header->dest_port) != HOST_TCP_PORT){
-		printf("Dropping packet: unknown port\n");
-		return TCP_NONE;
-	}
+		printf("received data octets: %hu\n", data_octets);
 
-	//checksum
-	uint16_t curr_checksum = calculate_tcp_checksum(packet, or_frame+34, tcp_segment_len, 1);
-	/*
-	 * comment out for TCP testing*/
+		//verifiy ip addr match
+		if(memcmp(tcp_ip_addr, packet->dest_addr, 4) != 0){
+			printf("Dropping packet: unknown TCP IP address\n");
+			return TCP_NONE;
+		}
 
-	if(curr_checksum != 0){
-		printf("Dropping packet: Incorrect Checksum\n");
-		//return TCP_NONE;
+		//verify if port match
+		if(ntohs(tcp_header->dest_port) != HOST_TCP_PORT){
+			printf("Dropping packet: unknown port\n");
+			return TCP_NONE;
+		}
+		//checksum
+		curr_checksum = calculate_tcp_checksum(packet, or_frame+34, tcp_segment_len, 1);
+		if(curr_checksum != 0){
+			printf("Dropping packet: Incorrect Checksum\n");
+			//return TCP_NONE;
+		}
 	}
 
 	/*check if connection does not exist*/
@@ -71,30 +73,34 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	//handle TCP payload
 	new_connection_status = handle_tcp_payload(or_frame, tcp_header, packet_inf, control_bits, data_octets, data_offset, tcp_connection_table_, packet, connection_idx, flag, tcp_header_len);
 
-	/*update ip field*/
-	memcpy(packet->dest_addr, packet->src_addr, 4);
-	memcpy(packet->src_addr, tcp_ip_addr, 4);
+	/*update ip field (unless it's FIN/ACK retransmission)*/
+	if(!flag){
 
-	//TTL
-	packet->ttl = 64;
+		memcpy(packet->dest_addr, packet->src_addr, 4);
+		memcpy(packet->src_addr, tcp_ip_addr, 4);
+
+		//TTL
+		packet->ttl = 64;
+
+		//update ip string
+		memcpy(packet_inf->dest_ip_addr, tcp_connection_table_[connection_idx].ip_str, INET_ADDRSTRLEN);
+	}
 
 	//identification number
-	packet->identification = htons(0); //should technically be random
+	packet->identification = (flag) ? htons(1) : htons(0); //should technically be random
 
 	//initialize checksum to zero
 	or_frame[50] = 0;
 	or_frame[51] = 0;
 
-	//compute TCP checksum
+	//compute TCP checksum (always)
 	uint16_t new_checksum = calculate_tcp_checksum(packet,  or_frame+34, tcp_segment_len, 0);
 	tcp_header->checksum = new_checksum;
-	/*
-	or_frame[50] = (new_checksum >>8) & 0xFF;
-	or_frame[51] = new_checksum & 0xFF;
-	*/
 
-	//update ip string
-	memcpy(packet_inf->dest_ip_addr, tcp_connection_table_[connection_idx].ip_str, INET_ADDRSTRLEN);
+	//print current connection status
+	printf("Current connection status: \n");
+	printf("Next Sequence: %u\n", tcp_connection_table_[connection_idx].next_seq);	
+	printf("Next connection ACK: %u\n", tcp_connection_table_[connection_idx].curr_seq);	
 
 	return new_connection_status;
 }
@@ -114,14 +120,6 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			tcp_header_->dest_port = tcp_header_->src_port; //update port 
 			tcp_header_->src_port = htons(HOST_TCP_PORT);
 
-			/*
-
-			if(data_offset_ > 5){
-				//change timestamp
-				int temp_offset = len - 
-				uint32_t client_ts = or_frame
-			}*/
-
 			/*add to connection table*/
 			tcp_connection_table_[connection_id].connection_id = connection_id;
 			memcpy(tcp_connection_table_[connection_id].host_ip_addr, packet->src_addr, 4);
@@ -137,6 +135,12 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 		case 16:
 			/*handle ack*/
 			//check if host was in process to end connection
+			
+			if(tcp_connection_table_[connection_id].connection_status == 0){ //connection already exist
+				printf("Digest packet (Connection Closed)\n");
+				return TCP_NONE;
+			}
+		
 
 			rcvd_ack = tcp_header_->ack_number;
 			tcp_header_->ack_number = htonl((ntohl(tcp_header_->seq_number) + data_octets)); //create ack
@@ -158,26 +162,37 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			}else{
 				//update external host's connection status
 				tcp_connection_table_[connection_id].connection_status = 1;
+				printf("Digesting ACK (No Reply)\n");
 			}
 
 			return TCP_NONE; //No transmission reply
 		case 18:
 			//handle SYN/ACK (currently not handled)
 			break;
-		case 10:
+		case 17:
 			//handle FIN/ACK
+			printf("Handing FIN/ACK\n");
+
 			if(flag){
 				//second transmission
-				tcp_header_->flag = htons((data_offset_ << 12) | 0x11); //set ACK
+				printf("Executing second transmission\n");
+				uint32_t curr_seq = tcp_connection_table_[connection_id].curr_seq;
+				uint32_t next_seq = tcp_connection_table_[connection_id].next_seq;
+
+				tcp_header_->seq_number = htonl(curr_seq);  //
+				tcp_header_->ack_number = htonl(next_seq);  //
+
+				tcp_header_->flag = htons((data_offset_ << 12) | 0x11); //set FIN/ACK
+			    tcp_connection_table_[connection_id].connection_status = 0; //close connection
 				return TCP_REG;	
 			}
 
 			rcvd_ack = tcp_header_->ack_number;
-			tcp_header_->ack_number = htonl((ntohl(tcp_header_->seq_number) + data_octets)); //create ack
+			tcp_header_->ack_number = htonl((ntohl(tcp_header_->seq_number) + 1)); //create ack
 			tcp_header_->seq_number = rcvd_ack; //set seq_num
 
 			//update TCP Payload field
-			tcp_header_->flag = htons((data_offset_ << 12) | 0x10); //set ACK
+			tcp_header_->flag = htons((data_offset_ << 12) | 0x10); //set FIN/ACK
 			tcp_header_->dest_port = tcp_header_->src_port; //update port
 			tcp_header_->src_port = htons(HOST_TCP_PORT);
 
@@ -187,8 +202,8 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 
 			return TCP_FIN_ACK;
 		default:
-			printf("unsupported flag");
-			return -1;
+			printf("unsupported flag: (%d)\n", control_bits);
+			return TCP_NONE;
 	}
 
 	return -1;
@@ -245,21 +260,21 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 	uint16_t orig_checksum = *((uint16_t *)(tcp_segment + 16));
 
 	/*
-	if (!verify) {
+	   if (!verify) {
 
-		orig_checksum = *((uint16_t*)(tcp_segment + 16));
-		// Set checksum field to zero for calculation
-		*((uint16_t*)(tcp_segment + 16)) = 0;
-	}*/
+	   orig_checksum = *((uint16_t*)(tcp_segment + 16));
+	// Set checksum field to zero for calculation
+	 *((uint16_t*)(tcp_segment + 16)) = 0;
+	 }*/
 
 
 	// Create buffer for pseudo-header + TCP segment
 	int total_len = sizeof(struct tcp_pseudo_header) + tcp_len;
-	    
+
 	//check for padding
 	if (total_len % 2 != 0) {
-        total_len++;
-    }
+		total_len++;
+	}
 
 	uint8_t *buffer = malloc(total_len);
 	if (!buffer) {
@@ -276,11 +291,11 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 	uint16_t checksum = ip_checksum(buffer, total_len);
 
 	// Restore original checksum if we're calculating a new one
-	
+
 	/*
-	if (!verify) {
-		*((uint16_t*)(tcp_segment + 16)) = orig_checksum;
-	}*/
+	   if (!verify) {
+	 *((uint16_t*)(tcp_segment + 16)) = orig_checksum;
+	 }*/
 
 	// Clean up
 	free(buffer);
@@ -289,7 +304,7 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 	printf("TCP Checksum: Original=0x%04x, Calculated=0x%04x\n",
 			ntohs(orig_checksum), ntohs(checksum));
 
-	return checksum;
+	return htons(checksum);
 }
 
 uint32_t get_timestamp(uint32_t client_ts){

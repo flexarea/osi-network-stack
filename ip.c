@@ -29,9 +29,8 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	int error = 0;
 	int transmitter_idx = *receiver_id;
 	uint8_t *final_dest_addr;
-	ssize_t curr_len = len;
+	ssize_t curr_len = len;  //remove the +4 for normal len (THIS IS FOR TCP TESTING)
 	int forwarding = 1;
-	char *data_as_hex;
 
 	//convert dest address to ip str
 	inet_ntop(AF_INET, &(packet->dest_addr), packet_inf->dest_ip_addr, INET_ADDRSTRLEN);	
@@ -182,12 +181,9 @@ if(packet->protocol == 6) {
             printf("forwarding FIN to %s\n", packet_inf->dest_ip_addr);
             break;
     }
-
-	printf("final packet:\n");
-	data_as_hex = binary_to_hex(or_frame, len);	
-	puts(data_as_hex);
-	free(data_as_hex);
-
+	printf("\n");
+	printf("--------------------------------------\n");
+	printf("\n");
     return;
 }
 
