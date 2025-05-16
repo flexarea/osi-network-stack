@@ -178,7 +178,7 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 		if(curr_frame->check_sum_match == 0){
 		//	printf("ignoring %d-byte frame", (int)frame_len);
 		//	printf("(bad fcs: got 0x%08x, expected 0x%08x)\n", curr_frame->rcv_check_sum, *curr_check_sum);
-			printf("WARNING: Bad Ethernet FCS but continuing anyway for testing\n");
+			//printf("WARNING: Bad Ethernet FCS but continuing anyway for testing\n");
 			//goto skip;
 		}
 
@@ -220,7 +220,7 @@ void interface_receiver(struct frame_fields *frame_f, struct frame_flags *curr_f
 					//printf("inside checksum check\n");
 					//printf("dropping packet from %s (bad IP header checksum)\n", ip_packet_info.src_ip_addr);
 					//goto skip;
-					printf("WARNING: Bad Ethernet FCS but continuing anyway for testing\n");
+					//printf("WARNING: Bad Ethernet FCS but continuing anyway for testing\n");
 
 				}	
 			}

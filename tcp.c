@@ -25,22 +25,22 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	 * */
 
 	//skip all these check in case of retransmission
-		printf("frame length: %d\n", (int) len);
-		uint8_t tcp_ip_addr[] = TCP_IP; //interface listener IP
-		struct tcp *tcp_header = (struct tcp *) (or_frame + 34); //extract tcp payload
-		int connection_idx;
-		int new_connection_status;
+	printf("frame length: %d\n", (int) len);
+	uint8_t tcp_ip_addr[] = TCP_IP; //interface listener IP
+	struct tcp *tcp_header = (struct tcp *) (or_frame + 34); //extract tcp payload
+	int connection_idx;
+	int new_connection_status;
 
-		uint8_t control_bits = (!flag) ? ntohs(tcp_header->flag) & 0x3F : 17;  //bitmask to extract flags only
-		uint8_t data_offset = (ntohs(tcp_header->flag) >> 12) & 0xF; //extract data offset
-		uint8_t tcp_header_len = data_offset*4;
-		uint16_t data_octets = (uint16_t)len - 14 -  20 - tcp_header_len;
-		uint16_t tcp_segment_len = tcp_header_len + data_octets;
-		uint16_t curr_checksum;
+	uint8_t control_bits = (!flag) ? ntohs(tcp_header->flag) & 0x3F : 17;  //bitmask to extract flags only
+	uint8_t data_offset = (ntohs(tcp_header->flag) >> 12) & 0xF; //extract data offset
+	uint8_t tcp_header_len = data_offset*4;
+	uint16_t data_octets = (uint16_t)len - 14 -  20 - tcp_header_len;
+	uint16_t tcp_segment_len = tcp_header_len + data_octets;
+	uint16_t curr_checksum;
 
 	if(!flag){
 
-		printf("received data octets: %hu\n", data_octets);
+	//	printf("received data octets: %hu\n", data_octets);
 
 		//verifiy ip addr match
 		if(memcmp(tcp_ip_addr, packet->dest_addr, 4) != 0){
@@ -86,6 +86,10 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 		memcpy(packet_inf->dest_ip_addr, tcp_connection_table_[connection_idx].ip_str, INET_ADDRSTRLEN);
 	}
 
+	if(new_connection_status > 1){
+		tcp_segment_len -= data_octets;		
+	}
+
 	//identification number
 	packet->identification = (flag) ? htons(1) : htons(0); //should technically be random
 
@@ -98,9 +102,12 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	tcp_header->checksum = new_checksum;
 
 	//print current connection status
-	printf("Current connection status: \n");
+	printf("\n");
+	printf("TCP TRANSMISSION INFO\n");
+	printf("Current connection status\n");
 	printf("Next Sequence: %u\n", tcp_connection_table_[connection_idx].next_seq);	
 	printf("Next connection ACK: %u\n", tcp_connection_table_[connection_idx].curr_seq);	
+	printf("\n");
 
 	return new_connection_status;
 }
@@ -132,15 +139,16 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			tcp_connection_table_[connection_id].connection_status = 2;
 			printf("run handle syn case\n");
 			return TCP_REG;
+
 		case 16:
 			/*handle ack*/
 			//check if host was in process to end connection
-			
+
 			if(tcp_connection_table_[connection_id].connection_status == 0){ //connection already exist
 				printf("Digest packet (Connection Closed)\n");
 				return TCP_NONE;
 			}
-		
+
 
 			rcvd_ack = tcp_header_->ack_number;
 			tcp_header_->ack_number = htonl((ntohl(tcp_header_->seq_number) + data_octets)); //create ack
@@ -166,6 +174,37 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			}
 
 			return TCP_NONE; //No transmission reply
+		case 24:
+			/*handle PSH/ACK */
+
+			rcvd_ack = tcp_header_->ack_number;
+			tcp_header_->ack_number = htonl((ntohl(tcp_header_->seq_number) + data_octets)); //create ack
+			tcp_header_->seq_number = rcvd_ack; //set seq_num
+			
+
+			/*record next_seq*/
+			tcp_connection_table_[connection_id].next_seq = ntohl(tcp_header_->ack_number);
+			tcp_connection_table_[connection_id].curr_seq = ntohl(tcp_header_->seq_number);
+
+			//update TCP Payload field
+			tcp_header_->flag = htons((data_offset_ << 12) | 0x10); //set ACK
+			tcp_header_->dest_port = tcp_header_->src_port; //update port
+			tcp_header_->src_port = htons(HOST_TCP_PORT);
+
+			//output received data
+			uint8_t *data_ptr = or_frame + 34 + tcp_header_len;
+			printf("\n");
+			printf("received %d data octets\n", (int)data_octets);
+			printf("\n");
+			write(STDOUT_FILENO, data_ptr, data_octets);
+
+			//resize packet
+			uint16_t new_ip_len = ntohs(packet->total_length) - data_octets;
+			packet->total_length = htons(new_ip_len);
+			//tcp_header->flag = htons((ntohs(tcp_header->flag) & 0x0FFF) | (8 << 12));
+			
+
+			return data_octets; // PSH/ACK case
 		case 18:
 			//handle SYN/ACK (currently not handled)
 			break;
@@ -183,7 +222,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 				tcp_header_->ack_number = htonl(next_seq);  //
 
 				tcp_header_->flag = htons((data_offset_ << 12) | 0x11); //set FIN/ACK
-			    tcp_connection_table_[connection_id].connection_status = 0; //close connection
+				tcp_connection_table_[connection_id].connection_status = 0; //close connection
 				return TCP_REG;	
 			}
 
@@ -192,7 +231,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			tcp_header_->seq_number = rcvd_ack; //set seq_num
 
 			//update TCP Payload field
-			tcp_header_->flag = htons((data_offset_ << 12) | 0x10); //set FIN/ACK
+			tcp_header_->flag = htons((data_offset_ << 12) | 0x10); //set ACK
 			tcp_header_->dest_port = tcp_header_->src_port; //update port
 			tcp_header_->src_port = htons(HOST_TCP_PORT);
 
@@ -213,7 +252,6 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 
 //handle action connection
 int connection_lookup(struct tcp_connection *tcp_connection_table_, uint8_t *ip_addr){
-
 	for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
 		if(memcmp(tcp_connection_table_[i].host_ip_addr, ip_addr, 4) == 0){
 			return i;
@@ -301,8 +339,7 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 	free(buffer);
 
 	// For debugging, print the original and calculated checksums
-	printf("TCP Checksum: Original=0x%04x, Calculated=0x%04x\n",
-			ntohs(orig_checksum), ntohs(checksum));
+//	printf("TCP Checksum: Original=0x%04x, Calculated=0x%04x\n",ntohs(orig_checksum), ntohs(checksum));
 
 	return htons(checksum);
 }

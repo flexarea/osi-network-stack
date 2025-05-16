@@ -150,6 +150,17 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 if(packet->protocol == 6) {
     int  transmission_status = handle_tcp(len, or_frame, packet, packet_inf, tcp_connection_table_, 0);
 
+	if(transmission_status > 1){
+		
+	//RCVD PSH/ACK
+	curr_len -= transmission_status; //decrease length
+    encapsulation(frame_f, packet, &curr_len, or_frame, final_dest_addr, curr_icmp,
+                 interface_list_, error, packet_inf, transmitter_idx,
+                 tcp_connection_table_, 0);
+            send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
+	return;
+	}
+
     // First encapsulation (for all cases)
     encapsulation(frame_f, packet, &curr_len, or_frame, final_dest_addr, curr_icmp,
                  interface_list_, error, packet_inf, transmitter_idx,
@@ -179,6 +190,7 @@ if(packet->protocol == 6) {
             // Send FIN
             send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
             printf("forwarding FIN to %s\n", packet_inf->dest_ip_addr);
+			printf("Closing connection\n"); //should be more descriptive
             break;
     }
 	printf("\n");
