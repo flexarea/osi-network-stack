@@ -295,7 +295,7 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 
 	//save original checksum if 
 
-	uint16_t orig_checksum = *((uint16_t *)(tcp_segment + 16));
+	//uint16_t orig_checksum = *((uint16_t *)(tcp_segment + 16));
 
 	/*
 	   if (!verify) {
