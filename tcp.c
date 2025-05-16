@@ -215,11 +215,14 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			if(flag){
 				//second transmission
 				printf("Executing second transmission\n");
+				/*
 				uint32_t curr_seq = tcp_connection_table_[connection_id].curr_seq;
 				uint32_t next_seq = tcp_connection_table_[connection_id].next_seq;
 
-				tcp_header_->seq_number = htonl(curr_seq);  //
-				tcp_header_->ack_number = htonl(next_seq);  //
+				tcp_header_->seq_number = htonl(curr_seq);
+				tcp_header_->ack_number = htonl(next_seq);
+				*/
+														
 
 				tcp_header_->flag = htons((data_offset_ << 12) | 0x11); //set FIN/ACK
 				tcp_connection_table_[connection_id].connection_status = 0; //close connection

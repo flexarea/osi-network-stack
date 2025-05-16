@@ -38,8 +38,8 @@ typedef struct tcp_connection{
 	int connection_id;
 	uint8_t host_ip_addr[4];
 	char ip_str[INET_ADDRSTRLEN];
-	uint32_t next_seq;
-	uint32_t curr_seq;
+	uint32_t next_seq; //next server's ack number
+	uint32_t curr_seq; //next server's sequence  number
 	int connection_status; //active(1), SYN/RCVD(2) not_connected(0) FIN/ACK(3)
 }tcp_connection;
 
