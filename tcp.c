@@ -62,7 +62,7 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	}
 
 	/*check if connection does not exist*/
-	if((connection_idx = connection_lookup(tcp_connection_table_, packet->src_addr )) == -1){
+	if((connection_idx = connection_lookup(tcp_connection_table_, packet->src_addr, ntohs(tcp_header->src_port))) == -1){
 		/*check if there is room for connection*/
 		if((connection_idx = is_space(tcp_connection_table_)) == -1){
 			printf("Cannot establish connection: Connection Limit Reached\n");
@@ -131,6 +131,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			tcp_connection_table_[connection_id].connection_id = connection_id;
 			memcpy(tcp_connection_table_[connection_id].host_ip_addr, packet->src_addr, 4);
 			memcpy(tcp_connection_table_[connection_id].ip_str, packet_inf->src_ip_addr, INET_ADDRSTRLEN);
+			tcp_connection_table_[connection_id].port = ntohs(tcp_header_->src_port);
 
 			/*record next_seq*/
 			tcp_connection_table_[connection_id].next_seq = ntohl(tcp_header_->ack_number);
@@ -168,9 +169,14 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 				}
 
 			}else{
-				//update external host's connection status
-				tcp_connection_table_[connection_id].connection_status = 1;
-				printf("Digesting ACK (No Reply)\n");
+				//check if it's last ACK or SYN/ACK response
+				if(tcp_connection_table_[connection_id].connection_status == 2){
+					//update external host's connection status
+					tcp_connection_table_[connection_id].connection_status = 1;
+					printf("Digesting ACK (No Reply)\n");
+				}else{
+					memset(&tcp_connection_table_[connection_id], 0, sizeof(struct tcp_connection));
+				}
 			}
 
 			return TCP_NONE; //No transmission reply
@@ -254,9 +260,11 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 //calculate data length
 
 //handle action connection
-int connection_lookup(struct tcp_connection *tcp_connection_table_, uint8_t *ip_addr){
+int connection_lookup(struct tcp_connection *tcp_connection_table_, uint8_t *ip_addr, uint16_t src_port){
 	for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
-		if(memcmp(tcp_connection_table_[i].host_ip_addr, ip_addr, 4) == 0){
+		int ip_check = memcmp(tcp_connection_table_[i].host_ip_addr, ip_addr, 4); 
+		int port = (src_port == tcp_connection_table_[i].port) ? 0 : 1; 
+		if(!ip_check && !port){
 			return i;
 		}
 	}
@@ -352,3 +360,16 @@ uint32_t get_timestamp(uint32_t client_ts){
 }
 
 
+/*
+ * run it everytime handle_tcp_payload is called
+ * after read input from user
+ * */
+void open_connections(struct tcp_connection *tcp_connection_table_){
+	printf("Current open connections:\n");
+	printf("Select and Enter Connection ID to begin conversation\n");
+	for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
+		if(tcp_connection_table_[i].connection_status){
+			printf("%s ID: %d\n", tcp_connection_table_[i].ip_str, tcp_connection_table_[i].connection_id);
+		}
+	}
+}

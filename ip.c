@@ -194,6 +194,7 @@ if(packet->protocol == 6) {
             break;
     }
 	printf("\n");
+	open_connections(tcp_connection_table_);
 	printf("--------------------------------------\n");
 	printf("\n");
     return;

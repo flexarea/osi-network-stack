@@ -76,8 +76,7 @@ int main(int argc, char *argv[]){
 
 	/*Configure TCP connection table*/
 	for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
-		tcp_connection_table[i].connection_id = i;
-		tcp_connection_table[i].connection_status = 0;
+		memset(&tcp_connection_table[i], 0, sizeof(struct tcp_connection));
 	}
 
 
