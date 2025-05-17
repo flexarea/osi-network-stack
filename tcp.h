@@ -35,7 +35,6 @@ typedef struct tcp_pseudo_header {
 
 typedef struct tcp_connection{
 	int extreme; //1(connecting) 0(listening)
-	int connection_id;
 	uint8_t host_ip_addr[4];
 	char ip_str[INET_ADDRSTRLEN];
 	uint16_t port;

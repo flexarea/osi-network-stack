@@ -27,10 +27,13 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	//skip all these check in case of retransmission
 	printf("frame length: %d\n", (int) len);
 	uint8_t tcp_ip_addr[] = TCP_IP; //interface listener IP
+	uint8_t tmp_addr[4];
+	uint16_t tmp_port;
 	struct tcp *tcp_header = (struct tcp *) (or_frame + 34); //extract tcp payload
 	int connection_idx;
 	int new_connection_status;
 
+	/*extract tcp header flags*/
 	uint8_t control_bits = (!flag) ? ntohs(tcp_header->flag) & 0x3F : 17;  //bitmask to extract flags only
 	uint8_t data_offset = (ntohs(tcp_header->flag) >> 12) & 0xF; //extract data offset
 	uint8_t tcp_header_len = data_offset*4;
@@ -38,9 +41,11 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	uint16_t tcp_segment_len = tcp_header_len + data_octets;
 	uint16_t curr_checksum;
 
-	if(!flag){
+	/*save ip and port to find interface in FIN/ACK case */
+	memcpy(tmp_addr, packet->dest_addr, 4);
+	tmp_port = ntohs(tcp_header-> dest_port);
 
-	//	printf("received data octets: %hu\n", data_octets);
+	if(!flag){
 
 		//verifiy ip addr match
 		if(memcmp(tcp_ip_addr, packet->dest_addr, 4) != 0){
@@ -59,15 +64,21 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 			printf("Dropping packet: Incorrect Checksum\n");
 			//return TCP_NONE;
 		}
+
+		/*case interface addr is src addr*/
+		memcpy(tmp_addr, packet->src_addr, 4); 
+		tmp_port = ntohs(tcp_header-> src_port);
 	}
 
 	/*check if connection does not exist*/
-	if((connection_idx = connection_lookup(tcp_connection_table_, packet->src_addr, ntohs(tcp_header->src_port))) == -1){
+	if((connection_idx = connection_lookup(tcp_connection_table_, tmp_addr, tmp_port)) == -1){
 		/*check if there is room for connection*/
 		if((connection_idx = is_space(tcp_connection_table_)) == -1){
 			printf("Cannot establish connection: Connection Limit Reached\n");
 			return TCP_NONE;
 		}	
+		printf("found space for connection\n");
+		printf("New connection ID %d\n", connection_idx);
 	}
 
 	//handle TCP payload
@@ -128,10 +139,10 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			tcp_header_->src_port = htons(HOST_TCP_PORT);
 
 			/*add to connection table*/
-			tcp_connection_table_[connection_id].connection_id = connection_id;
+			//tcp_connection_table_[connection_id].connection_id = connection_id;
 			memcpy(tcp_connection_table_[connection_id].host_ip_addr, packet->src_addr, 4);
 			memcpy(tcp_connection_table_[connection_id].ip_str, packet_inf->src_ip_addr, INET_ADDRSTRLEN);
-			tcp_connection_table_[connection_id].port = ntohs(tcp_header_->src_port);
+			tcp_connection_table_[connection_id].port = ntohs(tcp_header_->dest_port);
 
 			/*record next_seq*/
 			tcp_connection_table_[connection_id].next_seq = ntohl(tcp_header_->ack_number);
@@ -139,6 +150,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			//update external host's connection status
 			tcp_connection_table_[connection_id].connection_status = 2;
 			printf("run handle syn case\n");
+			printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
 			return TCP_REG;
 
 		case 16:
@@ -146,6 +158,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			//check if host was in process to end connection
 
 			if(tcp_connection_table_[connection_id].connection_status == 0){ //connection already exist
+				printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
 				printf("Digest packet (Connection Closed)\n");
 				return TCP_NONE;
 			}
@@ -173,9 +186,8 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 				if(tcp_connection_table_[connection_id].connection_status == 2){
 					//update external host's connection status
 					tcp_connection_table_[connection_id].connection_status = 1;
+					printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
 					printf("Digesting ACK (No Reply)\n");
-				}else{
-					memset(&tcp_connection_table_[connection_id], 0, sizeof(struct tcp_connection));
 				}
 			}
 
@@ -186,7 +198,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			rcvd_ack = tcp_header_->ack_number;
 			tcp_header_->ack_number = htonl((ntohl(tcp_header_->seq_number) + data_octets)); //create ack
 			tcp_header_->seq_number = rcvd_ack; //set seq_num
-			
+
 
 			/*record next_seq*/
 			tcp_connection_table_[connection_id].next_seq = ntohl(tcp_header_->ack_number);
@@ -208,7 +220,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			uint16_t new_ip_len = ntohs(packet->total_length) - data_octets;
 			packet->total_length = htons(new_ip_len);
 			//tcp_header->flag = htons((ntohs(tcp_header->flag) & 0x0FFF) | (8 << 12));
-			
+
 
 			return data_octets; // PSH/ACK case
 		case 18:
@@ -216,22 +228,23 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			break;
 		case 17:
 			//handle FIN/ACK
-			printf("Handing FIN/ACK\n");
+			printf("Handling FIN/ACK\n");
 
 			if(flag){
 				//second transmission
 				printf("Executing second transmission\n");
 				/*
-				uint32_t curr_seq = tcp_connection_table_[connection_id].curr_seq;
-				uint32_t next_seq = tcp_connection_table_[connection_id].next_seq;
+				   uint32_t curr_seq = tcp_connection_table_[connection_id].curr_seq;
+				   uint32_t next_seq = tcp_connection_table_[connection_id].next_seq;
 
-				tcp_header_->seq_number = htonl(curr_seq);
-				tcp_header_->ack_number = htonl(next_seq);
-				*/
-														
+				   tcp_header_->seq_number = htonl(curr_seq);
+				   tcp_header_->ack_number = htonl(next_seq);
+				   */
+
 
 				tcp_header_->flag = htons((data_offset_ << 12) | 0x11); //set FIN/ACK
 				tcp_connection_table_[connection_id].connection_status = 0; //close connection
+				printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
 				return TCP_REG;	
 			}
 
@@ -248,6 +261,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			tcp_connection_table_[connection_id].next_seq = ntohl(tcp_header_->ack_number);
 			tcp_connection_table_[connection_id].curr_seq = ntohl(tcp_header_->seq_number);
 
+			printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
 			return TCP_FIN_ACK;
 		default:
 			printf("unsupported flag: (%d)\n", control_bits);
@@ -265,6 +279,7 @@ int connection_lookup(struct tcp_connection *tcp_connection_table_, uint8_t *ip_
 		int ip_check = memcmp(tcp_connection_table_[i].host_ip_addr, ip_addr, 4); 
 		int port = (src_port == tcp_connection_table_[i].port) ? 0 : 1; 
 		if(!ip_check && !port){
+			printf("Found existing connection (ID: %d)\n", i);
 			return i;
 		}
 	}
@@ -350,7 +365,7 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 	free(buffer);
 
 	// For debugging, print the original and calculated checksums
-//	printf("TCP Checksum: Original=0x%04x, Calculated=0x%04x\n",ntohs(orig_checksum), ntohs(checksum));
+	//	printf("TCP Checksum: Original=0x%04x, Calculated=0x%04x\n",ntohs(orig_checksum), ntohs(checksum));
 
 	return htons(checksum);
 }
@@ -365,11 +380,25 @@ uint32_t get_timestamp(uint32_t client_ts){
  * after read input from user
  * */
 void open_connections(struct tcp_connection *tcp_connection_table_){
-	printf("Current open connections:\n");
-	printf("Select and Enter Connection ID to begin conversation\n");
+	int n_connections = 0;
+
 	for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
 		if(tcp_connection_table_[i].connection_status){
-			printf("%s ID: %d\n", tcp_connection_table_[i].ip_str, tcp_connection_table_[i].connection_id);
+			n_connections++;
 		}
 	}
+
+	/*check for open connections*/
+	if(n_connections){
+		printf("Current open connections: %d\n", n_connections);
+		printf("Select and Enter Connection ID to begin conversation\n");
+		for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
+			if(tcp_connection_table_[i].connection_status){
+				printf("%s PORT: %u ID: %d\n", tcp_connection_table_[i].ip_str, tcp_connection_table_[i].port, i);
+			}
+		}
+		return;
+	}
+	printf("No Connections Open\n");
 }
+
