@@ -26,7 +26,7 @@ int handle_tcp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, str
 	//skip all these check in case of retransmission
 	printf("frame length: %d\n", (int) len);
 	uint8_t tcp_ip_addr[] = TCP_IP; //interface listener IP
-	uint8_t tcp_mac[] = TCP_MAC; //interface listener IP
+	//uint8_t tcp_mac[] = TCP_MAC; //interface listener IP
 	uint8_t tmp_addr[4];
 	uint16_t tmp_port;
 	struct tcp *tcp_header = (struct tcp *) (or_frame + 34); //extract tcp payload
@@ -77,8 +77,8 @@ int handle_tcp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, str
 			printf("Cannot establish connection: Connection Limit Reached\n");
 			return TCP_NONE;
 		}	
-		printf("found space for connection\n");
-		printf("New connection ID %d\n", connection_idx);
+		//printf("found space for connection\n");
+		//printf("New connection ID %d\n", connection_idx);
 	}
 
 	//handle TCP payload
@@ -113,12 +113,14 @@ int handle_tcp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, str
 	tcp_header->checksum = new_checksum;
 
 	//print current connection status
+	/*
 	printf("\n");
 	printf("TCP TRANSMISSION INFO\n");
 	printf("Current connection status\n");
 	printf("Next Sequence: %u\n", tcp_connection_table_[connection_idx].next_seq);	
 	printf("Next connection ACK: %u\n", tcp_connection_table_[connection_idx].curr_seq);	
 	printf("\n");
+	*/
 
 	return new_connection_status;
 }
@@ -150,8 +152,8 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 
 			//update external host's connection status
 			tcp_connection_table_[connection_id].connection_status = 2;
-			printf("run handle syn case\n");
-			printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
+			//printf("run handle syn case\n");
+			//printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
 			return TCP_REG;
 
 		case 16:
@@ -159,8 +161,8 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			//check if host was in process to end connection
 
 			if(tcp_connection_table_[connection_id].connection_status == 0){ //connection already exist
-				printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
-				printf("Digest packet (Connection Closed)\n");
+				//printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
+				//printf("Digest packet (Connection Closed)\n");
 				return TCP_NONE;
 			}
 
@@ -177,7 +179,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 				if(data_octets > 0){
 					//buffer/output data here
 					uint8_t *data_ptr = or_frame + 34 + tcp_header_len;
-					printf("received %d data octets\n", (int)data_octets);
+					//printf("received %d data octets\n", (int)data_octets);
 					write(STDOUT_FILENO, data_ptr, data_octets);
 					return TCP_REG;
 				}
@@ -187,8 +189,8 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 				if(tcp_connection_table_[connection_id].connection_status == 2){
 					//update external host's connection status
 					tcp_connection_table_[connection_id].connection_status = 1;
-					printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
-					printf("Digesting ACK (No Reply)\n");
+					//printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
+					//printf("Digesting ACK (No Reply)\n");
 				}
 			}
 
@@ -213,9 +215,10 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			//output received data
 			uint8_t *data_ptr = or_frame + 34 + tcp_header_len;
 			printf("\n");
-			printf("received %d data octets\n", (int)data_octets);
-			printf("\n");
+			//printf("received %d data octets\n", (int)data_octets);
+				printf("Received data from  %s  PORT %u [ID: %d] -->\n", tcp_connection_table_[connection_id].ip_str, tcp_connection_table_[connection_id].port, connection_id);
 			write(STDOUT_FILENO, data_ptr, data_octets);
+			printf("\n");
 
 			//resize packet
 			uint16_t new_ip_len = ntohs(packet->total_length) - data_octets;
@@ -229,7 +232,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			break;
 		case 17:
 			//handle FIN/ACK
-			printf("Handling FIN/ACK\n");
+			//printf("Handling FIN/ACK\n");
 
 			if(flag){
 				//second transmission
@@ -278,7 +281,7 @@ int connection_lookup(struct tcp_connection *tcp_connection_table_, uint8_t *ip_
 		int ip_check = memcmp(tcp_connection_table_[i].host_ip_addr, ip_addr, 4); 
 		int port = (src_port == tcp_connection_table_[i].port) ? 0 : 1; 
 		if(!ip_check && !port){
-			printf("Found existing connection (ID: %d)\n", i);
+			//printf("Found existing connection (ID: %d)\n", i);
 			return i;
 		}
 	}
@@ -387,12 +390,12 @@ void open_connections(struct tcp_connection *tcp_connection_table_){
 		}
 	}
 
-	int tmp_flag = promise(tcp_connection_table_);
+//	int tmp_flag = promise(tcp_connection_table_);
 
 	/*check for open connections*/
-	if(n_connections && tmp_flag == -1){
-		printf("Current open connections: %d\n", n_connections);
-		printf("Select and Enter Connection ID+C to begin conversation and ID+Q to quit connection\n");
+	if(n_connections){
+		printf("[Open connections: %d]\n", n_connections);
+		printf("Select and Enter [ID]c to begin conversation and [ID]q to close a connection\n");
 		for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
 			if(tcp_connection_table_[i].connection_status){
 				printf("%s PORT: %u ID: %d\n", tcp_connection_table_[i].ip_str, tcp_connection_table_[i].port, i);
@@ -400,12 +403,12 @@ void open_connections(struct tcp_connection *tcp_connection_table_){
 		}
 		return;
 	}
-	if(tmp_flag == 0) printf("No Connections Open\n");
+	printf("No Connections Open\n");
 }
 
 int interaction_handler(int interface_id, struct tcp_connection *tcp_connection_table_, uint8_t *tcp_mac, uint8_t *tcp_ip, struct interface *interface_list_) {
 
-	printf("Debug: interaction_handler called\n");
+	//printf("Debug: interaction_handler called\n");
 	char data_buffer[1024];
 	int read_bytes;
 	int id;
@@ -437,10 +440,19 @@ int interaction_handler(int interface_id, struct tcp_connection *tcp_connection_
 			id = parse_connection_command(data_buffer, &command); 
 			if(id == -1){
 				printf("Wrong input format. Please try again.\n");
+				printf("Example: 0c\n");
 				return -1;
 			}
 
 			if(command == 'Q' || command == 'q'){
+				
+				//first check if id
+			if(verify_user_id_input(id, tcp_connection_table_) == -1) {
+
+				printf("No Connection Associated with ID %d\n", atoi(data_buffer));
+				open_connections(tcp_connection_table_); // output ID again
+				return -1;
+			}
 				printf("closing connection %s  PORT %u [ID: %d]\n", tcp_connection_table_[id].ip_str, tcp_connection_table_[id].port, id);
 				tcp_connection_table_[id].connection_status = 0;
 
@@ -455,7 +467,7 @@ int interaction_handler(int interface_id, struct tcp_connection *tcp_connection_
 					// Clean up
 					free(frame);
 
-					printf("TRANSMITTING FIN/ACK PACKET\n");
+					//printf("TRANSMITTING FIN/ACK PACKET\n");
 				} else {
 					printf("Failed to create TCP segment\n");
 				}
@@ -465,13 +477,16 @@ int interaction_handler(int interface_id, struct tcp_connection *tcp_connection_
 
 			// Verify selected ID
 			if(verify_user_id_input(id, tcp_connection_table_) == -1) {
+
 				printf("No Connection Associated with ID %d\n", atoi(data_buffer));
 				return -1;
 			}
 
 			// Set connection to write mode
 			tcp_connection_table_[id].io = 1;
-			printf("Enter Text:\n"); //tcp>
+			printf("Entered chat mode for %s PORT: %u ID: %d\n", tcp_connection_table_[id].ip_str, tcp_connection_table_[id].port, id);
+			printf("input> "); //tcp>
+			fflush(stdout);
 		}
 
 		return 0;  // No data to send yet
@@ -483,35 +498,28 @@ int interaction_handler(int interface_id, struct tcp_connection *tcp_connection_
 	read_bytes = read_user_input(data_buffer, sizeof(data_buffer));
 
 	if(read_bytes == 1 && (data_buffer[0] == 'q' || data_buffer[0] == 'Q')) {
-		printf("Exiting chat mode\n");
+		printf("Exiting chat mode...\n");
 		tcp_connection_table_[id].io = 0;
 		return -1;
 	}
 
 	if(read_bytes > 0) {
-		// Remove newline if present
 		int len = read_bytes;
-		/*
-		if(len > 0 && data_buffer[len - 1] == '\n') {
-			data_buffer[len - 1] = '\0';
-			len--;
-		}*/
-
 		if(len > 0) {
-			printf("Sending %d bytes to connection %d\n", len, id);
-
+		//printf("Sending %d bytes to %s [ID %d]\n", len, id);
+				printf("Sending data to %s PORT: %u ID: %d\n", tcp_connection_table_[id].ip_str, tcp_connection_table_[id].port, id);
 
 			if(create_tcp_segment(len, data_buffer, tcp_connection_table_, 
 						tcp_mac, tcp_ip, id, &frame, &frame_size, 0) == 0) {
 
 				// Send the frame
-				int fd = interface_list_[interface_id].switch_[1];  // Output file descriptor
+				int fd = interface_list_[interface_id].switch_[1];  
 				send_ethernet_frame(fd, frame, frame_size);
 
 				// Clean up
 				free(frame);
 
-				printf("Data sent successfully\n");
+			//	printf("Data sent successfully\n");
 			} else {
 				printf("Failed to create TCP segment\n");
 			}
@@ -542,18 +550,9 @@ int promise(struct tcp_connection *tcp_connection_table_){
 }
 
 int read_user_input(char *buffer, int buffer_size){
-	/*
-	//create poll to detect write event
-	struct pollfd pfd;
-	pfd.fd = STDIN_FILENO; //user input
-	pfd.events = POLLIN;
-
-	if(poll(&pfd, 1, 0) > 0 && pfd.revents & POLLIN){
-		//read input here	
-	}*/
 
 	int read_bytes = read(STDIN_FILENO, buffer, buffer_size - 1);	
-	printf("Debug: read %d bytes: '%s'\n", read_bytes, buffer);
+	//printf("Debug: read %d bytes: '%s'\n", read_bytes, buffer);
 	if(read_bytes > 0){
 		buffer[read_bytes] = '\0';
 		return read_bytes;
@@ -663,7 +662,7 @@ int parse_connection_command(char *input, char *command) {
 		return -1;  // Invalid command
 	}
 
-	// Convert uppercase to lowercase
+	// Convert uppercase to lowercase (at least trying)
 	cmd = (last_char == 'C') ? 'C' : (last_char == 'Q') ? 'Q' : last_char;
 
 	// Extract the ID part

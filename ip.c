@@ -31,6 +31,7 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	uint8_t *final_dest_addr;
 	ssize_t curr_len = len;  //remove the +4 for normal len (THIS IS FOR TCP TESTING)
 	int forwarding = 1;
+	int tcp_output = 0;
 
 	//convert dest address to ip str
 	inet_ntop(AF_INET, &(packet->dest_addr), packet_inf->dest_ip_addr, INET_ADDRSTRLEN);	
@@ -148,9 +149,8 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	
 	// In handle_packet
 if(packet->protocol == 6) {
-	uint8_t tcp_ip[] = TCP_IP;
-	uint8_t tcp_mac[] = TCP_MAC;
     int  transmission_status = handle_tcp(len, frame_f, or_frame, packet, packet_inf, tcp_connection_table_, 0);
+	tcp_output = transmission_status == TCP_NONE ? 1 : 0; //only output stuff when sending ACKs
 
 	if(transmission_status > 1){
 		
@@ -159,7 +159,8 @@ if(packet->protocol == 6) {
     encapsulation(frame_f, packet, &curr_len, or_frame, final_dest_addr, curr_icmp,
                  interface_list_, error, packet_inf, transmitter_idx,
                  tcp_connection_table_, 0);
-            send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
+    send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
+
 	open_connections(tcp_connection_table_);
 
 	// interaction mode after replying
@@ -182,14 +183,14 @@ if(packet->protocol == 6) {
         case TCP_REG:
             // Send the packet (already encapsulated)
             send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
-			printf("TCP REPLY\n");
-            printf("forwarding packet to %s\n", packet_inf->dest_ip_addr);
+			//printf("TCP REPLY\n");
+            printf("Sending packet to %s\n", packet_inf->dest_ip_addr);
             break;
 
         case TCP_FIN_ACK:
             // Send ACK (already encapsulated)
             send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
-            printf("forwarding ACK to %s\n", packet_inf->dest_ip_addr);
+            //printf("Sending ACK to %s\n", packet_inf->dest_ip_addr);
 
             // Prepare FIN
             handle_tcp(len, frame_f, or_frame, packet, packet_inf, tcp_connection_table_, 1);
@@ -197,12 +198,12 @@ if(packet->protocol == 6) {
 
             // Send FIN
             send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
-            printf("forwarding FIN to %s\n", packet_inf->dest_ip_addr);
+            //printf("Sending FIN/ACK to %s\n", packet_inf->dest_ip_addr);
 			printf("Closing connection\n"); //should be more descriptive
             break;
     }
 	printf("\n");
-    open_connections(tcp_connection_table_);
+	if(tcp_output) open_connections(tcp_connection_table_);
 	
 	// interaction begins here
 		
