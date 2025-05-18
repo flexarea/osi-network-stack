@@ -148,7 +148,9 @@ void handle_packet(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame,
 	
 	// In handle_packet
 if(packet->protocol == 6) {
-    int  transmission_status = handle_tcp(len, or_frame, packet, packet_inf, tcp_connection_table_, 0);
+	uint8_t tcp_ip[] = TCP_IP;
+	uint8_t tcp_mac[] = TCP_MAC;
+    int  transmission_status = handle_tcp(len, frame_f, or_frame, packet, packet_inf, tcp_connection_table_, 0);
 
 	if(transmission_status > 1){
 		
@@ -158,6 +160,12 @@ if(packet->protocol == 6) {
                  interface_list_, error, packet_inf, transmitter_idx,
                  tcp_connection_table_, 0);
             send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
+	open_connections(tcp_connection_table_);
+
+	// interaction mode after replying
+	printf("--------------------------------------\n");
+	printf("\n");
+
 	return;
 	}
 
@@ -184,7 +192,7 @@ if(packet->protocol == 6) {
             printf("forwarding ACK to %s\n", packet_inf->dest_ip_addr);
 
             // Prepare FIN
-            handle_tcp(len, or_frame, packet, packet_inf, tcp_connection_table_, 1);
+            handle_tcp(len, frame_f, or_frame, packet, packet_inf, tcp_connection_table_, 1);
             encapsulation(frame_f, packet, &curr_len, or_frame, final_dest_addr, curr_icmp, interface_list_, error, packet_inf, transmitter_idx, tcp_connection_table_, 1);
 
             // Send FIN
@@ -194,7 +202,13 @@ if(packet->protocol == 6) {
             break;
     }
 	printf("\n");
-	open_connections(tcp_connection_table_);
+    open_connections(tcp_connection_table_);
+	
+	// interaction begins here
+		
+	/*
+    interaction_handler(transmitter_idx, tcp_connection_table_, tcp_mac, tcp_ip, interface_list_);*/
+
 	printf("--------------------------------------\n");
 	printf("\n");
     return;

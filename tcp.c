@@ -14,12 +14,11 @@
 #include <poll.h>
 #include <sys/random.h>
 #include "tcp.h"
-#include "icmp.h"
 #include <inttypes.h>
 
 //flag(1)FIN/ACK second transmission
 
-int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf,  struct tcp_connection *tcp_connection_table_, int flag){
+int handle_tcp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, struct ip_header *packet, struct packet_info *packet_inf,  struct tcp_connection *tcp_connection_table_, int flag){
 	/*
 	 * return 0(transmission) 1(2transmissions) -1(no transmissions)
 	 * */
@@ -27,6 +26,7 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	//skip all these check in case of retransmission
 	printf("frame length: %d\n", (int) len);
 	uint8_t tcp_ip_addr[] = TCP_IP; //interface listener IP
+	uint8_t tcp_mac[] = TCP_MAC; //interface listener IP
 	uint8_t tmp_addr[4];
 	uint16_t tmp_port;
 	struct tcp *tcp_header = (struct tcp *) (or_frame + 34); //extract tcp payload
@@ -82,7 +82,7 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 	}
 
 	//handle TCP payload
-	new_connection_status = handle_tcp_payload(or_frame, tcp_header, packet_inf, control_bits, data_octets, data_offset, tcp_connection_table_, packet, connection_idx, flag, tcp_header_len);
+	new_connection_status = handle_tcp_payload(or_frame, tcp_header, packet_inf, control_bits, data_octets, data_offset, tcp_connection_table_, packet, connection_idx, flag, tcp_header_len, frame_f);
 
 	/*update ip field (unless it's FIN/ACK retransmission)*/
 	if(!flag){
@@ -124,7 +124,7 @@ int handle_tcp(ssize_t len, uint8_t *or_frame, struct ip_header *packet, struct 
 }
 
 //create sequence number, modify ack number, send tcp packet
-int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet_info *packet_inf, uint8_t control_bits, int8_t data_octets, int8_t data_offset_, struct tcp_connection *tcp_connection_table_, struct ip_header *packet, int connection_id, int flag, uint8_t tcp_header_len){
+int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet_info *packet_inf, uint8_t control_bits, int8_t data_octets, int8_t data_offset_, struct tcp_connection *tcp_connection_table_, struct ip_header *packet, int connection_id, int flag, uint8_t tcp_header_len, struct frame_fields *frame_f){
 
 	uint32_t rcvd_ack;
 	//check  flag
@@ -144,6 +144,7 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			memcpy(tcp_connection_table_[connection_id].ip_str, packet_inf->src_ip_addr, INET_ADDRSTRLEN);
 			tcp_connection_table_[connection_id].port = ntohs(tcp_header_->dest_port);
 
+			memcpy(tcp_connection_table_[connection_id].host_mac, frame_f->src_addr, 6);
 			/*record next_seq*/
 			tcp_connection_table_[connection_id].next_seq = ntohl(tcp_header_->ack_number);
 
@@ -232,19 +233,12 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 
 			if(flag){
 				//second transmission
-				printf("Executing second transmission\n");
-				/*
-				   uint32_t curr_seq = tcp_connection_table_[connection_id].curr_seq;
-				   uint32_t next_seq = tcp_connection_table_[connection_id].next_seq;
+				//printf("Executing second transmission\n");
 
-				   tcp_header_->seq_number = htonl(curr_seq);
-				   tcp_header_->ack_number = htonl(next_seq);
-				   */
-
-
+				printf("closing connection %s  PORT %u [ID: %d]\n", tcp_connection_table_[connection_id].ip_str, tcp_connection_table_[connection_id].port, connection_id);
 				tcp_header_->flag = htons((data_offset_ << 12) | 0x11); //set FIN/ACK
 				tcp_connection_table_[connection_id].connection_status = 0; //close connection
-				printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
+																			//printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
 				return TCP_REG;	
 			}
 
@@ -260,8 +254,13 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			/*record next_seq*/
 			tcp_connection_table_[connection_id].next_seq = ntohl(tcp_header_->ack_number);
 			tcp_connection_table_[connection_id].curr_seq = ntohl(tcp_header_->seq_number);
+			//receiving FIN/ACK response
+			if(tcp_connection_table_[connection_id].connection_status == 0){
+				printf("Sending ACK [connection closed]\n");
+				return TCP_REG; // send packet
+			}
 
-			printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
+			//printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist
 			return TCP_FIN_ACK;
 		default:
 			printf("unsupported flag: (%d)\n", control_bits);
@@ -388,10 +387,12 @@ void open_connections(struct tcp_connection *tcp_connection_table_){
 		}
 	}
 
+	int tmp_flag = promise(tcp_connection_table_);
+
 	/*check for open connections*/
-	if(n_connections){
+	if(n_connections && tmp_flag == -1){
 		printf("Current open connections: %d\n", n_connections);
-		printf("Select and Enter Connection ID to begin conversation\n");
+		printf("Select and Enter Connection ID+C to begin conversation and ID+Q to quit connection\n");
 		for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
 			if(tcp_connection_table_[i].connection_status){
 				printf("%s PORT: %u ID: %d\n", tcp_connection_table_[i].ip_str, tcp_connection_table_[i].port, i);
@@ -399,6 +400,278 @@ void open_connections(struct tcp_connection *tcp_connection_table_){
 		}
 		return;
 	}
-	printf("No Connections Open\n");
+	if(tmp_flag == 0) printf("No Connections Open\n");
 }
 
+int interaction_handler(int interface_id, struct tcp_connection *tcp_connection_table_, uint8_t *tcp_mac, uint8_t *tcp_ip, struct interface *interface_list_) {
+
+	printf("Debug: interaction_handler called\n");
+	char data_buffer[1024];
+	int read_bytes;
+	int id;
+	char command;
+
+	uint8_t *frame;
+	int frame_size;
+
+
+	// Check if we're already in write mode with a connection
+	int active_connection = promise(tcp_connection_table_);
+
+	if(active_connection == -1) {
+
+		// We're not in write mode, display connections and ask for ID
+		//open_connections(tcp_connection_table_);
+
+		// Check for user input for connection ID
+		read_bytes = read_user_input(data_buffer, sizeof(data_buffer));
+		if(read_bytes > 0) {
+
+			// Remove newline if present
+			if(data_buffer[read_bytes - 1] == '\n') {
+				data_buffer[read_bytes - 1] = '\0';
+				read_bytes--;
+			}
+
+			/*parse command*/
+			id = parse_connection_command(data_buffer, &command); 
+			if(id == -1){
+				printf("Wrong input format. Please try again.\n");
+				return -1;
+			}
+
+			if(command == 'Q' || command == 'q'){
+				printf("closing connection %s  PORT %u [ID: %d]\n", tcp_connection_table_[id].ip_str, tcp_connection_table_[id].port, id);
+				tcp_connection_table_[id].connection_status = 0;
+
+				//send FIN/ACK here
+				if(create_tcp_segment(0, data_buffer, tcp_connection_table_, 
+							tcp_mac, tcp_ip, id, &frame, &frame_size, 1) == 0) {
+
+					// Send the frame
+					int fd = interface_list_[interface_id].switch_[1];
+					send_ethernet_frame(fd, frame, frame_size);
+
+					// Clean up
+					free(frame);
+
+					printf("TRANSMITTING FIN/ACK PACKET\n");
+				} else {
+					printf("Failed to create TCP segment\n");
+				}
+
+				return -1;
+			}
+
+			// Verify selected ID
+			if(verify_user_id_input(id, tcp_connection_table_) == -1) {
+				printf("No Connection Associated with ID %d\n", atoi(data_buffer));
+				return -1;
+			}
+
+			// Set connection to write mode
+			tcp_connection_table_[id].io = 1;
+			printf("Enter Text:\n"); //tcp>
+		}
+
+		return 0;  // No data to send yet
+	}
+
+	// We have an active connection in write mode, check for data to send
+	id = active_connection;  // Use  active connection
+
+	read_bytes = read_user_input(data_buffer, sizeof(data_buffer));
+
+	if(read_bytes == 1 && (data_buffer[0] == 'q' || data_buffer[0] == 'Q')) {
+		printf("Exiting chat mode\n");
+		tcp_connection_table_[id].io = 0;
+		return -1;
+	}
+
+	if(read_bytes > 0) {
+		// Remove newline if present
+		int len = read_bytes;
+		/*
+		if(len > 0 && data_buffer[len - 1] == '\n') {
+			data_buffer[len - 1] = '\0';
+			len--;
+		}*/
+
+		if(len > 0) {
+			printf("Sending %d bytes to connection %d\n", len, id);
+
+
+			if(create_tcp_segment(len, data_buffer, tcp_connection_table_, 
+						tcp_mac, tcp_ip, id, &frame, &frame_size, 0) == 0) {
+
+				// Send the frame
+				int fd = interface_list_[interface_id].switch_[1];  // Output file descriptor
+				send_ethernet_frame(fd, frame, frame_size);
+
+				// Clean up
+				free(frame);
+
+				printf("Data sent successfully\n");
+			} else {
+				printf("Failed to create TCP segment\n");
+			}
+
+			// Reset connection mode
+			tcp_connection_table_[id].io = 0;
+		}
+	}
+
+	return 0;
+}
+int verify_user_id_input(int device_id, struct tcp_connection *tcp_connection_table_){
+	for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
+		if((device_id == i) && tcp_connection_table_[i].connection_status){
+			return i;
+		}
+	}
+	return -1;
+}
+
+int promise(struct tcp_connection *tcp_connection_table_){
+	for(int i=0; i<TCP_CONNECTION_LIMIT; i++){
+		if(tcp_connection_table_[i].io){
+			return i;
+		}
+	}
+	return -1;
+}
+
+int read_user_input(char *buffer, int buffer_size){
+	/*
+	//create poll to detect write event
+	struct pollfd pfd;
+	pfd.fd = STDIN_FILENO; //user input
+	pfd.events = POLLIN;
+
+	if(poll(&pfd, 1, 0) > 0 && pfd.revents & POLLIN){
+		//read input here	
+	}*/
+
+	int read_bytes = read(STDIN_FILENO, buffer, buffer_size - 1);	
+	printf("Debug: read %d bytes: '%s'\n", read_bytes, buffer);
+	if(read_bytes > 0){
+		buffer[read_bytes] = '\0';
+		return read_bytes;
+	}
+	return 0;
+}
+
+int create_tcp_segment(int data_len, char *buffer, struct tcp_connection *tcp_connection_table_, uint8_t *tcp_mac, uint8_t *tcp_ip, int device_id, uint8_t **out_frame, int *out_frame_size, int fin_flag) {
+
+	// Calculate frame size: Ethernet + IP + TCP + data + FCS
+	int true_len = fin_flag ? 0 : data_len;
+	size_t frame_size = 14 + 20 + 20 + true_len + 4;
+
+	// Allocate memory for the frame
+	uint8_t *frame = malloc(frame_size);
+	if(!frame) {
+		perror("malloc");
+		return -1;
+	}
+
+	// Clear the buffer
+	memset(frame, 0, frame_size);
+
+	// Set up Ethernet header
+	struct frame_fields *ether = (struct frame_fields *)frame;
+	memcpy(ether->src_addr, tcp_mac, 6);
+	memcpy(ether->dest_addr, tcp_connection_table_[device_id].host_mac, 6);
+	ether->type = htons(0x0800);  // IPv4
+
+	// Set up IP header
+	struct ip_header *ip_header = (struct ip_header *)(frame + 14);
+	ip_header->version_IHL = 0x45;  // IPv4, 5 words header
+	ip_header->type_of_service = 0;
+	ip_header->total_length = htons(20 + 20 + true_len);  // IP + TCP + data
+	ip_header->identification = 0;
+	ip_header->flag_fragment_offset = htons(0x4000);  // No fragment
+	ip_header->ttl = 64;
+	ip_header->protocol = 6;  // TCP
+	memcpy(ip_header->src_addr, tcp_ip, 4);
+	memcpy(ip_header->dest_addr, tcp_connection_table_[device_id].host_ip_addr, 4);
+
+	// Set up TCP header
+	struct tcp *tcp_header = (struct tcp *)(frame + 34);
+	tcp_header->src_port = htons(HOST_TCP_PORT);
+	tcp_header->dest_port = htons(tcp_connection_table_[device_id].port);
+	tcp_header->seq_number = htonl(tcp_connection_table_[device_id].curr_seq);
+	tcp_header->ack_number = htonl(tcp_connection_table_[device_id].next_seq);
+
+	//update flag based on (fin_flag)
+
+	if(fin_flag){
+		tcp_header->flag = htons((5 << 12) | 0x11);  // FIN/ACK
+		tcp_connection_table_[device_id].connection_status = 0;
+	}else{
+		tcp_header->flag = htons((5 << 12) | 0x18);  // PSH+ACK
+	}
+	tcp_header->window = htons(65535);
+	tcp_header->urgent_pointer = 0;
+
+	// Copy data into frame (if data is being transmitted)
+	if(true_len > 0) memcpy(frame + 34 + 20, buffer, true_len);
+
+	// Update sequence number
+	if(!true_len){
+		tcp_connection_table_[device_id].curr_seq++;
+	}else{
+		tcp_connection_table_[device_id].curr_seq += true_len;
+	}
+
+
+	/*Calculate TCP checksum*/
+
+	// Zero out checksum field first
+	tcp_header->checksum = 0;
+
+	tcp_header->checksum = calculate_tcp_checksum(ip_header, (uint8_t *)tcp_header, 20 + true_len, 0);
+
+	/* Calculate IP checksum*/
+	ip_header->header_checksum = 0;
+	ip_header->header_checksum = htons(ip_checksum((uint8_t *)ip_header, 20));
+
+	/*Calculate frame CRC*/
+	uint32_t crc = crc32(0, frame, frame_size - 4);
+	memcpy(frame + (frame_size - 4), &crc, 4);
+
+	// Output parameters
+	*out_frame = frame;
+	*out_frame_size = frame_size;
+
+	return 0;  // Success
+}
+
+int parse_connection_command(char *input, char *command) {
+	int id = -1;
+	char cmd = '\0';
+
+	// Check for correct format (ID+C or ID+Q)
+	int len = strlen(input);
+	if (len < 2) {
+		return -1;
+	}
+
+	// Last character should be C or Q
+	char last_char = input[len-1];
+	if (last_char != 'C' && last_char != 'Q' &&
+			last_char != 'c' && last_char != 'q') {
+		return -1;  // Invalid command
+	}
+
+	// Convert uppercase to lowercase
+	cmd = (last_char == 'C') ? 'C' : (last_char == 'Q') ? 'Q' : last_char;
+
+	// Extract the ID part
+	input[len-1] = '\0';  // Temporarily null-terminate to parse ID
+	id = atoi(input);
+
+	// Save command
+	*command = cmd;
+
+	return id;
+}

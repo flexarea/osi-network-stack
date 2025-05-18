@@ -118,7 +118,8 @@ void network_configuration(struct frame_fields *frame_f, struct frame_flags *cur
 	}
 	
 	/*polling implementation*/
-	struct pollfd *pfds =  malloc(NUMBER_INTERFACES * sizeof(struct pollfd));
+	//add 1 for STDIN
+	struct pollfd *pfds =  malloc(NUMBER_INTERFACES+1 * sizeof(struct pollfd));
 	if (pfds == NULL) {
         perror("Failed to allocate memory for poll fds");
         exit(1);
@@ -130,8 +131,17 @@ void network_configuration(struct frame_fields *frame_f, struct frame_flags *cur
 		pfds[i].events = POLLIN;
 	}
 
+	//configure stdin polling
+	pfds[NUMBER_INTERFACES].fd = STDIN_FILENO; //user input
+	pfds[NUMBER_INTERFACES].events = POLLIN;
+
+	uint8_t tcp_mac[] = TCP_MAC;
+    uint8_t tcp_ip[] = TCP_IP;
+
+	int default_tcp_interface_id = 0;
+
 	while(1){
-		if(poll(pfds, NUMBER_INTERFACES, -1) == -1){
+		if(poll(pfds, NUMBER_INTERFACES + 1, -1) == -1){
 			printf("poll");
 			exit(1);
 		}
@@ -141,6 +151,10 @@ void network_configuration(struct frame_fields *frame_f, struct frame_flags *cur
 
 				interface_receiver(frame_f, curr_frame, curr_check_sum, data_size, routing_table, arp_cache, interface_list_, i, tcp_connection_table_);
 			}
+		}
+
+		if(pfds[NUMBER_INTERFACES].revents & POLLIN){
+			interaction_handler(default_tcp_interface_id, tcp_connection_table_, tcp_mac, tcp_ip, interface_list_);
 		}
 	}
 	

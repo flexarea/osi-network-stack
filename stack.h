@@ -14,6 +14,7 @@
 #define TABLE_LENGTH 3
 #define HOST_TCP_PORT 1234
 #define TCP_IP {0xC0,0xA8,0x00,0x05} //Interface1 IP address
+#define TCP_MAC {0x12,0x9f,0x41,0x0d,0x0e,0x64} //Interface1 MAC
 #define TCP_CONNECTION_LIMIT 10
 
 typedef struct router{
