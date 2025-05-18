@@ -97,7 +97,7 @@ int handle_tcp(ssize_t len, struct frame_fields *frame_f, uint8_t *or_frame, str
 		memcpy(packet_inf->dest_ip_addr, tcp_connection_table_[connection_idx].ip_str, INET_ADDRSTRLEN);
 	}
 
-	if(new_connection_status > 1){
+	if(new_connection_status >= 1){
 		tcp_segment_len -= data_octets;		
 	}
 
@@ -225,7 +225,6 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			packet->total_length = htons(new_ip_len);
 			//tcp_header->flag = htons((ntohs(tcp_header->flag) & 0x0FFF) | (8 << 12));
 
-
 			return data_octets; // PSH/ACK case
 		case 18:
 			//handle SYN/ACK (currently not handled)
@@ -260,7 +259,8 @@ int handle_tcp_payload(uint8_t *or_frame, struct tcp *tcp_header_, struct packet
 			//receiving FIN/ACK response
 			if(tcp_connection_table_[connection_id].connection_status == 0){
 				printf("Sending ACK [connection closed]\n");
-				return TCP_REG; // send packet
+				//return TCP_REG; // send packet
+				return -2;
 			}
 
 			//printf("connection status: %d\n", tcp_connection_table_[connection_id].connection_status); //connection already exist

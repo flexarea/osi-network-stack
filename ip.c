@@ -152,7 +152,7 @@ if(packet->protocol == 6) {
     int  transmission_status = handle_tcp(len, frame_f, or_frame, packet, packet_inf, tcp_connection_table_, 0);
 	tcp_output = transmission_status == TCP_NONE ? 1 : 0; //only output stuff when sending ACKs
 
-	if(transmission_status > 1){
+	if(transmission_status >= 1){
 		
 	//RCVD PSH/ACK
 	curr_len -= transmission_status; //decrease length
@@ -185,6 +185,13 @@ if(packet->protocol == 6) {
             send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
 			//printf("TCP REPLY\n");
             printf("Sending packet to %s\n", packet_inf->dest_ip_addr);
+            break;
+        case -2:
+            // Send the packet (already encapsulated)
+            send_ethernet_frame(interface_list_[transmitter_idx].switch_[1], or_frame, curr_len);
+			//printf("TCP REPLY\n");
+            printf("Sending packet to %s\n", packet_inf->dest_ip_addr);
+			open_connections(tcp_connection_table_);
             break;
 
         case TCP_FIN_ACK:

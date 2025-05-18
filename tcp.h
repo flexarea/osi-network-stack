@@ -12,7 +12,7 @@ struct packet_info;
 
 #define TCP_NONE -1 // No transmission
 #define TCP_REG 0  // Regular (single) transmission
-#define TCP_FIN_ACK 1 // Double transmission
+#define TCP_FIN_ACK -3 // Double transmission
 
 typedef struct tcp{
 	uint16_t src_port;
