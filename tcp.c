@@ -325,15 +325,6 @@ uint16_t calculate_tcp_checksum(struct ip_header *packet, uint8_t *tcp_segment, 
 
 	//uint16_t orig_checksum = *((uint16_t *)(tcp_segment + 16));
 
-	/*
-	   if (!verify) {
-
-	   orig_checksum = *((uint16_t*)(tcp_segment + 16));
-	// Set checksum field to zero for calculation
-	 *((uint16_t*)(tcp_segment + 16)) = 0;
-	 }*/
-
-
 	// Create buffer for pseudo-header + TCP segment
 	int total_len = sizeof(struct tcp_pseudo_header) + tcp_len;
 
@@ -389,8 +380,6 @@ void open_connections(struct tcp_connection *tcp_connection_table_){
 			n_connections++;
 		}
 	}
-
-//	int tmp_flag = promise(tcp_connection_table_);
 
 	/*check for open connections*/
 	if(n_connections){

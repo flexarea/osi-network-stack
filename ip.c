@@ -214,9 +214,6 @@ if(packet->protocol == 6) {
 	
 	// interaction begins here
 		
-	/*
-    interaction_handler(transmitter_idx, tcp_connection_table_, tcp_mac, tcp_ip, interface_list_);*/
-
 	printf("--------------------------------------\n");
 	printf("\n");
     return;
