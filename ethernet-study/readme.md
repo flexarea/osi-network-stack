@@ -98,7 +98,6 @@ Conclusion:
 
 - Given the recorded outputs above we see that for N=10 nearly all transmissions fail due to collisions. And as we scale N, things seem to even get worse as the hub blindly forwards all transmissions to all connected devices, resulting in a higher collision rate.
 
-
 - Similar to the switch, the implementation of this simulation significantly affects the low transmission success rate, mostly due to the assumption that each device has a 50% chance of transmitting a frame in any given time slot. This high probability drastically reduces the success rate, especially in a hub-based setup where frames are broadcast to all devices. Since simultaneous transmissions from two or more devices lead to immediate collisions, the 50% transmission probability greatly increases the likelihood of collisions as the number of devices (N) grows, making it nearly impossible to avoid collisions at scale.
 
 - We assume a half-duplex transmission medium for the hub, as devices cannot transmit and receive simultaneously. This constraint allows collisions to occur when two or more devices attempt to send frames over the shared medium at the same time.
