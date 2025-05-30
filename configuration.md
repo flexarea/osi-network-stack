@@ -5,10 +5,16 @@
 ## run script to connect tap0 interface  to vde switches
 ./tap0_.sh
 
+## run stack (main entry program simulating network router)
+./stack
+
+## run sender
+./sender
+
+## configure ethernet frame or ip packet field in sender (use `./test/stack_test` as reference for packet configurations based on protocol)
+vim sender.c 
 
 # Establish a TCP connection
-
-
 ## launch client (netcat)
 nc 192.168.0.5 1234
 
