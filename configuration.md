@@ -1,11 +1,11 @@
-#Run Procedure (To simulate IP packet forwarding):
+# Run Procedure (To simulate IP packet forwarding):
 ## start vde script
 ./vde_s.sh
 
 ## run script to connect tap0 interface  to vde switches
 ./tap0_.sh
 
-## run stack (main entry program simulating network router)
+## run stack (main program entry simulating network router)
 ./stack
 
 ## run sender
