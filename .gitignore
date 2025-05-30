@@ -2,3 +2,8 @@
 !*.c
 !Makefile
 backup.c
+*.core
+hex
+txt
+txt2
+hex2
