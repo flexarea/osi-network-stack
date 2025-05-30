@@ -1,4 +1,4 @@
-##launch client (netcat)
+#launch client (netcat)
 nc 192.168.0.5 1234
 
 #use different port for multiple client
